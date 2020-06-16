@@ -13,5 +13,11 @@ data class AppConfig(
     val allowedUsers: Set<Int>,
 
     @JsonProperty
-    val port: Int?
+    val port: Int?,
+
+    @JsonProperty
+    val appName: String?,
+
+    @JsonProperty
+    val secret: String?
 )

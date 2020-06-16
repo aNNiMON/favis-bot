@@ -46,6 +46,12 @@ object FavisBot {
         }.start(appConfig.port ?: 9377)
 
         app.routes {
+            get("/meta") { ctx -> ctx.json(hashMapOf(
+                "appName" to (appConfig.appName ?: appConfig.username),
+                "username" to appConfig.username,
+                "stickerSets" to repository.findAllStickerSets()
+            )) }
+
             get("/items") { ctx ->
                 ctx.json(repository.findAll())
             }

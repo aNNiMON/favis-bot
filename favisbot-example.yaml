@@ -4,3 +4,6 @@ token: yout_bot_token
 allowedUsers: [123, 456, 789]
 # Server config
 port: 9377
+# Meta
+appName: FavisBot
+secret: SomeRandomText

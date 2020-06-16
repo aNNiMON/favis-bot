@@ -17,6 +17,12 @@ class ItemsRepository(private val db: Database) {
 
     fun findById(id: String) = db.where("id = ?", id).first(DbItem::class.java)
 
+    fun findAllStickerSets() = db.sql("""
+            SELECT `stickerSet` FROM items
+            GROUP BY `stickerSet`
+            ORDER BY `stickerSet`
+            """.trimIndent()).results(String::class.java)
+
     fun createTableIfNotExists() {
         db.sql("""
             CREATE TABLE IF NOT EXISTS items (
