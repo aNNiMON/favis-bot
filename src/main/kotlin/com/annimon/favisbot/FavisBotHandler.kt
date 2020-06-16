@@ -36,6 +36,18 @@ class FavisBotHandler(
         }
 
         if (message.hasSticker()) {
+            val setName = message.sticker.setName
+            val stickerSet = Methods.Stickers.getStickerSet(setName).call(this)
+            if (stickerSet == null) return
+            downloadThumbs(stickerSet)
+            val newItemsCount = stickerSet.stickers
+                .filterNot { repository.isItemExists(it.fileId) }
+                .map { DbItem(it.fileId, "sticker", stickerSet.name, if (it.animated) 1 else 0) }
+                .onEach { repository.addItem(it) }
+                .count()
+            Methods.sendMessage(message.from.id.toLong(),
+                "Added $newItemsCount stickers")
+                .call(this)
         }
     }
 
