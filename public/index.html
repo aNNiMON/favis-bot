@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FavisBot</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <link rel="stylesheet" href="https://unpkg.com/chota@latest">
+</head>
+<body>
+    <div class="container" id="app">
+        <h2>Favis Bot</h2>
+        <div class="row">
+            <div class="card col-12 col-6-md col-4-lg" v-for="item in items" :key="item.id">
+                <img class="section media" :src="thumbUrl(item)"/>
+                <div class="row">
+                    <div class="col">
+                        <input type="text" id="tags" placeholder="Tags"/>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <button class="button primary">Apply</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/app.js"></script>
+</body>
+</html>

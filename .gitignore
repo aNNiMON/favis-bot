@@ -1,0 +1,9 @@
+.idea
+.gradle
+build
+public/thumbs
+out
+gen
+favisbot.db
+favisbot.yaml
+*.iml
