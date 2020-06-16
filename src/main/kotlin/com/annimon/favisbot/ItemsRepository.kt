@@ -21,7 +21,14 @@ class ItemsRepository(private val db: Database) {
             SELECT `stickerSet` FROM items
             GROUP BY `stickerSet`
             ORDER BY `stickerSet`
-            """.trimIndent()).results(String::class.java)
+            """.trimIndent())
+            .results(String::class.java)
+    
+    fun findAllByStickerSet(stickerSet: String) = db.sql("""
+            SELECT * FROM items
+            WHERE `stickerSet` = ?
+            """.trimIndent(), stickerSet)
+            .results(DbItem::class.java)
 
     fun createTableIfNotExists() {
         db.sql("""

@@ -12,12 +12,13 @@
         <h2>🤖 <a :href="'https://t.me/' + meta.username" target="_blank">{{ meta.appName }}</a></h2>
         <div class="row">
             <div class="col-3">
-                <select name="stickerSet" v-model="stickerSet">
+                <select name="stickerSet" @change="onStickerSetChange()" v-model="stickerSet">
                     <option selected disabled value="">Выберите стикерпак</option>
                     <option v-for="set in meta.stickerSets" :value="set">{{ set }}</option>
                 </select>
             </div>
-
+        </div>
+        <div class="row">
             <div class="card col-12 col-6-md col-4-lg" v-for="item in items" :key="item.id">
                 <img class="section media" :src="thumbUrl(item)"/>
                 <div class="row">

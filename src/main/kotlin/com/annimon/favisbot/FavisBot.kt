@@ -52,12 +52,9 @@ object FavisBot {
                 "stickerSets" to repository.findAllStickerSets()
             )) }
 
-            get("/items") { ctx ->
-                ctx.json(repository.findAll())
-            }
-            get("/items/:id") { ctx ->
-                val id = ctx.pathParam("id")
-                ctx.json(repository.findById(id))
+            get("/items/:stickerSet") { ctx ->
+                val stickerSet = ctx.pathParam("stickerSet")
+                ctx.json(repository.findAllByStickerSet(stickerSet)!!)
             }
         }
     }
