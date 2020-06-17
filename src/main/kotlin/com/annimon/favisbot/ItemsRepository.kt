@@ -13,24 +13,34 @@ class ItemsRepository(private val db: Database) {
         db.insert(item)
     }
 
-    fun findAll() = db.results(DbItem::class.java)
+    // Stockers
 
-    fun findById(id: String) = db.where("id = ?", id).first(DbItem::class.java)
-
-    fun findAllStickerSets() = db.sql("""
+    fun findAllStickerSets(): List<String> = db.sql("""
             SELECT `stickerSet` FROM items
             GROUP BY `stickerSet`
             ORDER BY `stickerSet`
             """.trimIndent())
             .results(String::class.java)
-    
-    fun findAllByStickerSet(stickerSet: String) = db.sql("""
+
+    fun findAllByStickerSet(stickerSet: String): List<DbItem> = db.sql("""
             SELECT * FROM items
             WHERE `stickerSet` = ?
             """.trimIndent(), stickerSet)
             .results(DbItem::class.java)
 
-    fun createTableIfNotExists() {
+    // Users
+
+    fun findUserById(id: Int): DbUser? = db.where("id = ?", id).first(DbUser::class.java)
+
+    fun findUserByGUID(guid: String): DbUser? = db.where("guid = ?", guid).first(DbUser::class.java)
+
+    fun addUser(user: DbUser) {
+        db.insert(user)
+    }
+
+    // Other
+
+    fun createTablesIfNotExists() {
         db.sql("""
             CREATE TABLE IF NOT EXISTS items (
               `id`          TEXT PRIMARY KEY,
@@ -38,5 +48,14 @@ class ItemsRepository(private val db: Database) {
               `stickerSet`  TEXT,
               `animated`    INTEGER NOT NULL
             )""".trimIndent()).execute()
+        db.sql("""
+            CREATE TABLE IF NOT EXISTS users (
+              `id`          INTEGER PRIMARY KEY,
+              `firstName`   TEXT NOT NULL,
+              `guid`        TEXT NOT NULL,
+              `allowed`     INTEGER NOT NULL,
+              `updatedAt`  INTEGER NOT NULL
+            )""".trimIndent()).execute()
+        // TODO index
     }
 }

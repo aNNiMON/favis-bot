@@ -7,6 +7,8 @@ import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.stickers.StickerSet
 import java.io.File
+import java.time.Instant
+import java.util.*
 
 class FavisBotHandler(
     private val appConfig: AppConfig,
@@ -32,7 +34,26 @@ class FavisBotHandler(
             Methods.sendMessage(message.from.id.toLong(),
                 "You don't have enough rights to access this bot")
                 .callAsync(this)
-            return
+            // return TODO: check admin and allow register
+        }
+
+        if (message.hasText()) {
+            val (command, _) = message.text.split(" ".toRegex(), 2)
+            when (command.toLowerCase()) {
+                "/register" -> {
+                    val guid = UUID.randomUUID().toString()
+                    repository.addUser(DbUser(
+                            id = message.from.id,
+                            firstName = message.from.firstName,
+                            guid = guid,
+                            allowed = 1,
+                            updatedAt = Instant.now().epochSecond
+                    ))
+                    Methods.sendMessage(message.from.id.toLong(),
+                            "Your token: {url} $guid")
+                            .callAsync(this)
+                }
+            }
         }
 
         if (message.hasSticker()) {
@@ -61,5 +82,5 @@ class FavisBotHandler(
         }
     }
 
-    private fun isUserAllowed(id: Int) = appConfig.allowedUsers.contains(id)
+    private fun isUserAllowed(id: Int) = repository.findUserById(id)?.allowed != 0
 }

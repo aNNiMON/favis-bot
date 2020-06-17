@@ -9,9 +9,17 @@
 </head>
 <body>
     <div class="container" id="app">
-        <h2>🤖 <a :href="'https://t.me/' + meta.username" target="_blank">{{ meta.appName }}</a></h2>
+        <div class="nav">
+            <div class="nav-left">
+                <a class="brand" :href="'https://t.me/' + meta.bot" target="_blank">🤖  {{ meta.appName }}</a>
+            </div>
+            <div class="nav-right">
+                <a v-show="meta.user.length > 0" class="#">Привет, {{ meta.user }}</a>
+                <!-- TODO: button with stats -->
+            </div>
+        </div>
         <div class="row">
-            <div class="col-3">
+            <div class="col-4">
                 <select name="stickerSet" @change="onStickerSetChange()" v-model="stickerSet">
                     <option selected disabled value="">Выберите стикерпак</option>
                     <option v-for="set in meta.stickerSets" :value="set">{{ set }}</option>

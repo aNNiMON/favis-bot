@@ -33,7 +33,7 @@ object FavisBot {
         val db = Database()
         db.setJdbcUrl("jdbc:sqlite:${name}.db")
         val repository = ItemsRepository(db)
-        repository.createTableIfNotExists()
+        repository.createTablesIfNotExists()
         return repository
     }
 
@@ -46,9 +46,10 @@ object FavisBot {
         }.start(appConfig.port ?: 9377)
 
         app.routes {
-            get("/meta") { ctx -> ctx.json(hashMapOf(
+            get("/meta/:guid") { ctx -> ctx.json(hashMapOf(
                 "appName" to (appConfig.appName ?: appConfig.username),
-                "username" to appConfig.username,
+                "bot" to appConfig.username,
+                "user" to (repository.findUserByGUID(ctx.pathParam("guid"))?.firstName ?: ""),
                 "stickerSets" to repository.findAllStickerSets()
             )) }
 

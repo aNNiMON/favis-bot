@@ -13,3 +13,15 @@ data class DbItem(
 ) {
     constructor() : this("", "", "", 0)
 }
+
+@Table(name = "users")
+data class DbUser(
+    @Id
+    var id: Int,
+    var firstName: String,
+    var guid: String?,
+    var allowed: Int,
+    var updatedAt: Long
+) {
+    constructor() : this(0, "", "", 0, 0)
+}
