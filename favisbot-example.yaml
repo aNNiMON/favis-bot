@@ -1,9 +1,8 @@
 # Bot config
-username: favisbot
-token: yout_bot_token
-allowedUsers: [123, 456, 789]
+botUsername: favisbot
+botToken: yout_bot_token
+adminId: 123456
 # Server config
 port: 9377
 # Meta
 appName: FavisBot
-secret: SomeRandomText

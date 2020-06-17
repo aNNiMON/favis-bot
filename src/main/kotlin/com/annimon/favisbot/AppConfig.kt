@@ -4,20 +4,17 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class AppConfig(
     @JsonProperty(required = true)
-    val token: String,
+    val botToken: String,
 
     @JsonProperty(required = true)
-    val username: String,
+    val botUsername: String,
 
     @JsonProperty(required = true)
-    val allowedUsers: Set<Int>,
+    val adminId: Int,
 
     @JsonProperty
     val port: Int?,
 
     @JsonProperty
-    val appName: String?,
-
-    @JsonProperty
-    val secret: String?
+    val appName: String?
 )

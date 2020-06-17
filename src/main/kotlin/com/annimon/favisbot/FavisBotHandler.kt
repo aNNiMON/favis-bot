@@ -12,12 +12,12 @@ import java.util.*
 
 class FavisBotHandler(
     private val appConfig: AppConfig,
-    private val repository: ItemsRepository
+    private val repository: DbRepository
 ) : BotHandler() {
 
-    override fun getBotUsername() = appConfig.username
+    override fun getBotUsername() = appConfig.botUsername
 
-    override fun getBotToken() = appConfig.token
+    override fun getBotToken() = appConfig.botToken
 
     override fun onUpdate(update: Update): BotApiMethod<*>? {
         if (update.hasMessage()) {
@@ -41,12 +41,13 @@ class FavisBotHandler(
             val (command, _) = message.text.split(" ".toRegex(), 2)
             when (command.toLowerCase()) {
                 "/register" -> {
+                    // TODO: check user exists
                     val guid = UUID.randomUUID().toString()
                     repository.addUser(DbUser(
                             id = message.from.id,
                             firstName = message.from.firstName,
                             guid = guid,
-                            allowed = 1,
+                            allowed = 0,
                             updatedAt = Instant.now().epochSecond
                     ))
                     Methods.sendMessage(message.from.id.toLong(),
@@ -82,5 +83,7 @@ class FavisBotHandler(
         }
     }
 
-    private fun isUserAllowed(id: Int) = repository.findUserById(id)?.allowed != 0
+    private fun isUserAllowed(id: Int) =
+            (appConfig.adminId == id)
+            || (repository.findUserById(id)?.allowed != 0)
 }

@@ -29,15 +29,15 @@ object FavisBot {
         }
     }
 
-    private fun initDatabase(name: String): ItemsRepository {
+    private fun initDatabase(name: String): DbRepository {
         val db = Database()
         db.setJdbcUrl("jdbc:sqlite:${name}.db")
-        val repository = ItemsRepository(db)
+        val repository = DbRepository(db)
         repository.createTablesIfNotExists()
         return repository
     }
 
-    private fun initServer(appConfig: AppConfig, repository: ItemsRepository) {
+    private fun initServer(appConfig: AppConfig, repository: DbRepository) {
         val app = Javalin.create {
             it.addStaticFiles("/", "public", Location.EXTERNAL)
         }.apply {
@@ -47,8 +47,8 @@ object FavisBot {
 
         app.routes {
             get("/meta/:guid") { ctx -> ctx.json(hashMapOf(
-                "appName" to (appConfig.appName ?: appConfig.username),
-                "bot" to appConfig.username,
+                "appName" to (appConfig.appName ?: appConfig.botUsername),
+                "bot" to appConfig.botUsername,
                 "user" to (repository.findUserByGUID(ctx.pathParam("guid"))?.firstName ?: ""),
                 "stickerSets" to repository.findAllStickerSets()
             )) }

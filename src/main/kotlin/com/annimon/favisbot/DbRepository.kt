@@ -2,7 +2,7 @@ package com.annimon.favisbot
 
 import com.dieselpoint.norm.Database
 
-class ItemsRepository(private val db: Database) {
+class DbRepository(private val db: Database) {
 
     fun isItemExists(id: String): Boolean {
         return db.sql("SELECT COUNT(*) FROM items WHERE id = ?", id)
