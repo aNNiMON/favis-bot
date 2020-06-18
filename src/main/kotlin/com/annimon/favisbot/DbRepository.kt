@@ -30,12 +30,21 @@ class DbRepository(private val db: Database) {
 
     // Users
 
+    fun isUserExists(id: Int): Boolean {
+        return db.sql("SELECT COUNT(*) FROM users WHERE id = ?", id)
+                .first(Int::class.java) != 0
+    }
+
     fun findUserById(id: Int): DbUser? = db.where("id = ?", id).first(DbUser::class.java)
 
     fun findUserByGUID(guid: String): DbUser? = db.where("guid = ?", guid).first(DbUser::class.java)
 
-    fun addUser(user: DbUser) {
-        db.insert(user)
+    fun upsertUser(user: DbUser) {
+        if (isUserExists(user.id)) {
+            db.update(user)
+        } else {
+            db.insert(user)
+        }
     }
 
     // Other
@@ -54,7 +63,7 @@ class DbRepository(private val db: Database) {
               `firstName`   TEXT NOT NULL,
               `guid`        TEXT NOT NULL,
               `allowed`     INTEGER NOT NULL,
-              `updatedAt`  INTEGER NOT NULL
+              `updatedAt`   INTEGER NOT NULL
             )""".trimIndent()).execute()
         // TODO index
     }

@@ -55,7 +55,7 @@ object FavisBot {
 
             get("/items/:stickerSet") { ctx ->
                 val stickerSet = ctx.pathParam("stickerSet")
-                ctx.json(repository.findAllByStickerSet(stickerSet)!!)
+                ctx.json(repository.findAllByStickerSet(stickerSet))
             }
         }
     }
