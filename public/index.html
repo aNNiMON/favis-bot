@@ -42,7 +42,7 @@
             <img class="section media" :src="thumbUrl(item)"/>
             <div class="row">
                 <div class="col">
-                    <input type="text" placeholder="Tags"
+                    <input type="text" placeholder="Tags" maxlength="255"
                            @keyup.enter="saveItem" v-model="item.tags"/>
                 </div>
             </div>

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.javalin.apibuilder.ApiBuilder.*
 import io.javalin.Javalin
 import io.javalin.http.staticfiles.Location
+import kotlin.math.min
 
 object FavisBot {
     @JvmStatic
@@ -87,6 +88,7 @@ object FavisBot {
                     val removed = repository.removeSavedItemIfExists(savedItem)
                     ctx.status(if (removed) 205 else 204)
                 } else {
+                    body.tags = body.tags.substring(0, min(body.tags.length, 255))
                     val created  = repository.upsertSavedItem(savedItem)
                     ctx.status(if (created) 201 else 200)
                 }
@@ -94,5 +96,5 @@ object FavisBot {
         }
     }
 
-    data class BodyItem(val id: String, val tags: String)
+    data class BodyItem(val id: String, var tags: String)
 }
