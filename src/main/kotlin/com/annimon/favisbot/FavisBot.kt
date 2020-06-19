@@ -59,28 +59,38 @@ object FavisBot {
                 ))
             }
 
+            before("/items/*") { ctx ->
+                val guid = ctx.header("guid") ?: ""
+                if (guid.isEmpty()) {
+                    ctx.status(401)
+                    return@before
+                }
+                val user = repository.findUserByGUID(guid)
+                if (user == null) {
+                    ctx.status(401)
+                    return@before
+                }
+                ctx.attribute("user", user)
+            }
             get("/items/:stickerSet") { ctx ->
                 val stickerSet = ctx.pathParam("stickerSet")
-                ctx.json(repository.findAllByStickerSet(stickerSet))
+                val user: DbUser = ctx.attribute("user")!!
+                ctx.json(repository.findAllByStickerSet(user.id, stickerSet))
             }
             post("/items") { ctx ->
                 val body = ctx.body<BodyItem>()
-                val user = repository.findUserByGUID(body.guid)
-                if (user == null) {
-                    ctx.status(401)
+                val user: DbUser = ctx.attribute("user")!!
+                val savedItem = DbSavedItem(body.id, user.id, body.tags)
+                if (body.tags.isBlank()) {
+                    val removed = repository.removeSavedItemIfExists(savedItem)
+                    ctx.status(if (removed) 205 else 204)
                 } else {
-                    val savedItem = DbSavedItem(body.id, user.id, body.tags)
-                    if (body.tags.isBlank()) {
-                        val removed = repository.removeSavedItemIfExists(savedItem)
-                        ctx.status(if (removed) 205 else 204)
-                    } else {
-                        val created  = repository.upsertSavedItem(savedItem)
-                        ctx.status(if (created) 201 else 200)
-                    }
+                    val created  = repository.upsertSavedItem(savedItem)
+                    ctx.status(if (created) 201 else 200)
                 }
             }
         }
     }
 
-    data class BodyItem(val guid: String, val id: String, val tags: String)
+    data class BodyItem(val id: String, val tags: String)
 }

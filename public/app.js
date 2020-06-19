@@ -24,8 +24,12 @@ const app = new Vue({
   methods: {
     onStickerSetChange: function() {
       this.items = []
-      fetch('/items/' + this.stickerSet)
-        .then(resp => resp.json())
+      fetch('/items/' + this.stickerSet, {
+        method: 'GET',
+        headers: {
+          'guid': this.accessKey
+        },
+      }).then(resp => resp.json())
         .then(data => this.items = data)
     },
     save: function(item) {
@@ -33,9 +37,9 @@ const app = new Vue({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json;charset=utf-8',
+          'guid': this.accessKey
         },
         body: JSON.stringify({
-          guid: this.accessKey,
           id: item.id,
           tags: item.tags || ""
         })
