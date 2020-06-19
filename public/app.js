@@ -1,3 +1,16 @@
+Vue.component('sticker', {
+  props: ['item'],
+  template: '#sticker-template',
+  methods: {
+    saveItem: function() {
+      this.$emit('save', this.item)
+    },
+    thumbUrl: function(item) {
+      return '/thumbs/' + item.stickerSet + '/' + item.id + '.png';
+    }
+  }
+})
+
 const app = new Vue({
   el: '#app',
   data() {
@@ -43,10 +56,7 @@ const app = new Vue({
           id: item.id,
           tags: item.tags || ""
         })
-      })//.then(resp => alert(resp.status))
-    },
-    thumbUrl: function(item) {
-      return '/thumbs/' + item.stickerSet + '/' + item.id + '.png';
+      })
     }
   }
 });
