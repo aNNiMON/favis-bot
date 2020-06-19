@@ -42,7 +42,8 @@
             <img class="section media" :src="thumbUrl(item)"/>
             <div class="row">
                 <div class="col">
-                    <input type="text" placeholder="Tags" v-model="item.tags"/>
+                    <input type="text" placeholder="Tags"
+                           @keyup.enter="saveItem" v-model="item.tags"/>
                 </div>
             </div>
             <div class="row">
