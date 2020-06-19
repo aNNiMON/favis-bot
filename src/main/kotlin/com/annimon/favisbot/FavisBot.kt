@@ -38,6 +38,7 @@ object FavisBot {
     }
 
     private fun initServer(appConfig: AppConfig, repository: DbRepository) {
+        // TODO: separate class
         val app = Javalin.create {
             it.addStaticFiles("/", "public", Location.EXTERNAL)
         }.apply {
@@ -57,6 +58,24 @@ object FavisBot {
                 val stickerSet = ctx.pathParam("stickerSet")
                 ctx.json(repository.findAllByStickerSet(stickerSet))
             }
+            post("/items") { ctx ->
+                val body = ctx.body<BodyItem>()
+                val user = repository.findUserByGUID(body.guid)
+                if (user == null) {
+                    ctx.status(401)
+                } else {
+                    val savedItem = DbSavedItem(body.id, user.id, body.tags)
+                    if (body.tags.isBlank()) {
+                        val removed = repository.removeSavedItemIfExists(savedItem)
+                        ctx.status(if (removed) 205 else 204)
+                    } else {
+                        val created  = repository.upsertSavedItem(savedItem)
+                        ctx.status(if (created) 201 else 200)
+                    }
+                }
+            }
         }
     }
+
+    data class BodyItem(val guid: String, val id: String, val tags: String)
 }

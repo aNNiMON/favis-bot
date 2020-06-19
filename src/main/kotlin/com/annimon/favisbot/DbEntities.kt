@@ -32,3 +32,12 @@ data class DbUser(
         val ALLOWANCE_IGNORED = 3
     }
 }
+
+@Table(name = "savedItems")
+data class DbSavedItem(
+    var itemId: String,
+    var userId: Int,
+    var tags: String
+) {
+    constructor() : this("", 0, "")
+}

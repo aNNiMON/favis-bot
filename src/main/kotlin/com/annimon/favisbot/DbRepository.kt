@@ -13,7 +13,38 @@ class DbRepository(private val db: Database) {
         db.insert(item)
     }
 
-    // Stockers
+    // Saved Items
+
+    fun isSavedItemExists(item: DbSavedItem) = db.sql(
+            "SELECT COUNT(*) FROM savedItems WHERE itemId = ? AND userId = ?",
+            item.itemId, item.userId)
+            .first(Int::class.java) != 0
+
+    fun removeSavedItemIfExists(item: DbSavedItem): Boolean {
+        if (isSavedItemExists(item)) {
+            db.table("savedItems")
+                    .where("itemId = ? AND userId = ?", item.itemId, item.userId)
+                    .delete()
+            return true
+        }
+        return false
+    }
+
+    fun upsertSavedItem(item: DbSavedItem): Boolean {
+        if (isSavedItemExists(item)) {
+            db.sql("UPDATE savedItems SET tags = ? WHERE itemId = ? AND userId = ?",
+                    item.tags, item.itemId, item.userId)
+                    .execute()
+            return false
+        } else {
+            db.sql("INSERT INTO savedItems(itemId, userId, tags) VALUES (?, ?, ?)",
+                   item.itemId, item.userId, item.tags)
+                    .execute()
+            return true
+        }
+    }
+
+    // Stickers
 
     fun findAllStickerSets(): List<String> = db.sql("""
             SELECT `stickerSet` FROM items
@@ -64,6 +95,13 @@ class DbRepository(private val db: Database) {
               `guid`        TEXT NOT NULL,
               `allowed`     INTEGER NOT NULL,
               `updatedAt`   INTEGER NOT NULL
+            )""".trimIndent()).execute()
+        db.sql("""
+            CREATE TABLE IF NOT EXISTS savedItems (
+              `itemId`      TEXT NOT NULL,
+              `userId`      INTEGER NOT NULL,
+              `tags`        TEXT NOT NULL,
+              PRIMARY KEY (itemId, userId)
             )""".trimIndent()).execute()
         // TODO index
     }

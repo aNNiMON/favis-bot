@@ -31,12 +31,12 @@
                 <img class="section media" :src="thumbUrl(item)"/>
                 <div class="row">
                     <div class="col">
-                        <input type="text" id="tags" placeholder="Tags"/>
+                        <input type="text" id="tags" placeholder="Tags" v-model="item.tags"/>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col">
-                        <button class="button primary">Apply</button>
+                        <button class="button primary" @click="save(item)">Apply</button>
                     </div>
                 </div>
             </div>
