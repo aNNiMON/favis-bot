@@ -44,6 +44,26 @@ class DbRepository(private val db: Database) {
         }
     }
 
+    fun searchItems(q: String, userId: Int): Pair<Int, List<DbItemWithTags>> {
+        val query = q.replace("[;:\"'`]".toRegex(), "").replace("%", "\\%")
+        val columns = "`id`, `type`, `animated`"
+        val sql = """
+                FROM items
+                INNER JOIN savedItems
+                    ON savedItems.itemId = items.id AND savedItems.userId = ?
+                """.trimIndent()
+        return if (query.isBlank() || query == ".all") {
+            val count = db.sql("SELECT COUNT(*) $sql", userId).first(Int::class.java)
+            val items = db.sql("SELECT $columns $sql", userId).results(DbItemWithTags::class.java)
+            Pair(count, items)
+        } else {
+            val where = "WHERE tags LIKE ?"
+            val count = db.sql("SELECT COUNT(*) $sql $where", userId, "%$q%").first(Int::class.java)
+            val items = db.sql("SELECT $columns $sql $where", userId, "%$q%").results(DbItemWithTags::class.java)
+            Pair(count, items)
+        }
+    }
+
     // Stickers
 
     fun findAllStickerSets(): List<String> =

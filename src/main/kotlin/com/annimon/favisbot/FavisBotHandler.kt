@@ -9,6 +9,11 @@ import com.annimon.tgbotsmodule.api.methods.Methods
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.Update
+import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery
+import org.telegram.telegrambots.meta.api.objects.inlinequery.inputmessagecontent.InputTextMessageContent
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultArticle
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedMpeg4Gif
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedSticker
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.meta.api.objects.stickers.StickerSet
@@ -44,8 +49,7 @@ class FavisBotHandler(
             return null
         }
         if (update.hasInlineQuery()) {
-            // processInline(update.inlineQuery)
-            // "You don't have enough rights to access this bot"
+            processInline(update.inlineQuery)
             return null
         }
         return null
@@ -75,6 +79,44 @@ class FavisBotHandler(
         Methods.editMessageReplyMarkup(message.chatId, message.messageId)
                 .setReplyMarkup(null)
                 .callAsync(this)
+    }
+
+    private fun processInline(inlineQuery: InlineQuery) {
+        val user = repository.findUserById(inlineQuery.from.id) ?: return
+        if (user.allowed == ALLOWANCE_IGNORED) return
+        if (user.allowed != ALLOWANCE_ALLOWED) {
+            val result = listOf(InlineQueryResultArticle().apply {
+                id = "3228"
+                title = "You don't have enough rights to access this bot"
+                inputMessageContent = InputTextMessageContent().apply {
+                    messageText = "You can request access to the bot by sending /register command in PM @${appConfig.botUsername}"
+                }
+            })
+            Methods.answerInlineQuery(inlineQuery.id, result).call(this);
+            return
+        }
+        val entriesPerPage = 25
+        val offset = inlineQuery.offset.toIntOrNull() ?: 0
+        val query = inlineQuery.query
+        val (count, items) = repository.searchItems(query, inlineQuery.from.id)
+        val results = items.mapNotNull { when (it.type) {
+            "sticker" -> InlineQueryResultCachedSticker().apply {
+                id = it.id.hashCode().toString()
+                stickerFileId = it.id
+            }
+            "animation" -> InlineQueryResultCachedMpeg4Gif().apply {
+                id = it.id.hashCode().toString()
+                mpeg4FileId = it.id
+            }
+            else -> null
+        } }
+        var nextOffset = ""
+        if (offset + entriesPerPage < count) {
+            nextOffset = (offset + entriesPerPage).toString()
+        }
+        Methods.answerInlineQuery(inlineQuery.id, results)
+                .setNextOffset(nextOffset)
+                .call(this)
     }
 
     private fun cmdRegister(message: Message) {
