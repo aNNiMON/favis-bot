@@ -59,7 +59,9 @@ object FavisBot {
                 ))
             }
 
-            before("/items/*") { ctx ->
+            before { ctx ->
+                if (!ctx.path().startsWith("/items"))
+                    return@before
                 val guid = ctx.header("guid") ?: ""
                 if (guid.isEmpty()) {
                     ctx.status(401)
