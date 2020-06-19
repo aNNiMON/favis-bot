@@ -47,12 +47,17 @@ object FavisBot {
         }.start(appConfig.port ?: 9377)
 
         app.routes {
-            get("/meta/:guid") { ctx -> ctx.json(hashMapOf(
-                "appName" to (appConfig.appName ?: appConfig.botUsername),
-                "bot" to appConfig.botUsername,
-                "user" to (repository.findUserByGUID(ctx.pathParam("guid"))?.firstName ?: ""),
-                "stickerSets" to repository.findAllStickerSets()
-            )) }
+            get("/meta/:guid") { ctx ->
+                val user = repository.findUserByGUID(ctx.pathParam("guid"))
+                val sets = if (user == null) emptyList()
+                           else repository.findAllStickerSets()
+                ctx.json(hashMapOf(
+                        "appName" to (appConfig.appName ?: appConfig.botUsername),
+                        "bot" to appConfig.botUsername,
+                        "user" to (user?.firstName ?: ""),
+                        "stickerSets" to sets
+                ))
+            }
 
             get("/items/:stickerSet") { ctx ->
                 val stickerSet = ctx.pathParam("stickerSet")

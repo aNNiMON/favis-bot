@@ -13,15 +13,19 @@
             <div class="nav-left">
                 <a class="brand" :href="'https://t.me/' + meta.bot" target="_blank">🤖  {{ meta.appName }}</a>
             </div>
-            <div class="nav-right">
-                <a v-show="meta.user.length > 0" class="#">Привет, {{ meta.user }}</a>
-                <!-- TODO: button with stats -->
+            <div class="nav-right" v-show="!authorized">
+                <a class="text-error" :href="'https://t.me/' + meta.bot">You're not authorized</a>
+            </div>
+            <div class="nav-right" v-show="authorized">
+                <a href="#">Привет, {{ meta.user }}</a>
+                <!-- TODO: link to stats -->
             </div>
         </div>
-        <div class="row">
+
+        <div class="row" v-show="authorized">
             <div class="col-4">
                 <select name="stickerSet" @change="onStickerSetChange()" v-model="stickerSet">
-                    <option selected disabled value="">Выберите стикерпак</option>
+                    <option selected disabled value="">Select stickerset</option>
                     <option v-for="set in meta.stickerSets" :value="set">{{ set }}</option>
                 </select>
             </div>

@@ -16,6 +16,11 @@ const app = new Vue({
       .then(resp => resp.json())
       .then(data => this.meta = data)
   },
+  computed: {
+    authorized: function() {
+      return this.meta.user.length > 0
+    }
+  },
   methods: {
     onStickerSetChange: function() {
       this.items = []
