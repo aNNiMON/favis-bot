@@ -46,18 +46,22 @@ class DbRepository(private val db: Database) {
 
     // Stickers
 
-    fun findAllStickerSets(): List<String> = db.sql("""
-            SELECT `stickerSet` FROM items
-            GROUP BY `stickerSet`
-            ORDER BY `stickerSet`
-            """.trimIndent())
+    fun findAllStickerSets(): List<String> =
+            db.sql("""
+                SELECT `stickerSet` FROM items
+                GROUP BY `stickerSet`
+                ORDER BY `stickerSet`
+                """.trimIndent())
             .results(String::class.java)
 
-    fun findAllByStickerSet(stickerSet: String): List<DbItem> = db.sql("""
-            SELECT * FROM items
-            WHERE `stickerSet` = ?
-            """.trimIndent(), stickerSet)
-            .results(DbItem::class.java)
+    fun findAllByStickerSet(userId: Int, stickerSet: String): List<DbItemWithTags> =
+            db.sql("""
+                SELECT items.*, savedItems.tags FROM items
+                LEFT JOIN savedItems
+                  ON savedItems.itemId = items.id AND savedItems.userId = ?
+                WHERE stickerSet = ?
+                """.trimIndent(), userId, stickerSet)
+            .results(DbItemWithTags::class.java)
 
     // Users
 

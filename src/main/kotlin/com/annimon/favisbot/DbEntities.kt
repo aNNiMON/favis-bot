@@ -14,6 +14,16 @@ data class DbItem(
     constructor() : this("", "", "", 0)
 }
 
+data class DbItemWithTags(
+    var id: String,
+    var type: String,
+    var stickerSet: String?,
+    var animated: Int,
+    var tags: String?
+) {
+    constructor() : this("", "", "", 0, "")
+}
+
 @Table(name = "users")
 data class DbUser(
     @JvmField @Id
