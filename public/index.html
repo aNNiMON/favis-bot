@@ -48,10 +48,11 @@
             <div class="row">
                 <div class="col">
                     <button class="button primary"
+                            :disabled="item.wait"
                             @click="saveItem">Apply</button>
                 </div>
-                <div class="col is-right is-vertical-align">
-                    <span class="text-success">Saved</span>
+                <div class="col is-right is-vertical-align" v-show="item.status !== ''">
+                    <span class="text-success">{{ item.status }}</span>
                 </div>
             </div>
         </div>

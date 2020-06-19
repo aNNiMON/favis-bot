@@ -43,9 +43,13 @@ const app = new Vue({
           'guid': this.accessKey
         },
       }).then(resp => resp.json())
-        .then(data => this.items = data)
+        .then(data => this.items = data.map(it =>
+                 Object.assign(it, {wait: false, status: ""})
+                 ))
     },
     save: function(item) {
+      item.status = ""
+      item.wait = true
       fetch('/items', {
         method: 'POST',
         headers: {
@@ -56,6 +60,16 @@ const app = new Vue({
           id: item.id,
           tags: item.tags || ""
         })
+      }).then(resp => {
+        item.wait = false
+        switch (resp.status) {
+          case 200: item.status = "Saved"; break;
+          case 201: item.status = "Added"; break;
+          case 205: item.status = "Removed"; break;
+          case 401: meta.user = ""; break;
+        }
+      }).catch(err => {
+        item.wait = false
       })
     }
   }
