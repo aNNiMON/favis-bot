@@ -13,6 +13,9 @@ data class AppConfig(
     val adminId: Int,
 
     @JsonProperty
+    val host: String?,
+
+    @JsonProperty
     val port: Int?,
 
     @JsonProperty

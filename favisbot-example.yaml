@@ -3,6 +3,7 @@ botUsername: favisbot
 botToken: yout_bot_token
 adminId: 123456
 # Server config
+host: http://127.0.0.1
 port: 9377
 # Meta
 appName: FavisBot

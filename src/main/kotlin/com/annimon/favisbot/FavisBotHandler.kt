@@ -182,9 +182,11 @@ class FavisBotHandler(
                         allowed = ALLOWANCE_ALLOWED,
                         updatedAt = Instant.now().epochSecond
                 ))
+                val host = appConfig.host ?: "http://127.0.0.1"
+                val port = appConfig.port ?: 9377
                 Methods.sendMessage(message.from.id.toLong(),
                         "Here's your link to the web page:\n" +
-                        "  {url} $guid\n" +
+                        " 🌐 $host:$port/?d=$guid\n" +
                         "You can generate a new link by sending /register again.")
                         .callAsync(this)
             }
