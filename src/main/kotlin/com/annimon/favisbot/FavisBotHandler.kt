@@ -35,6 +35,7 @@ class FavisBotHandler(
             val message = update.message
             val (command, _) = message.text.split(" ".toRegex(), 2)
             when (command.toLowerCase()) {
+                "/start" -> cmdStart(message)
                 "/register" -> cmdRegister(message)
             }
             return null
@@ -119,6 +120,20 @@ class FavisBotHandler(
                 .call(this)
     }
 
+    private fun cmdStart(message: Message) {
+        var text = "With this bot you can send your favorite stickers in inline mode. " +
+                   "You can define tags in a web-form, then search stickers by these tags.\n\n"
+        if (appConfig.adminId != message.from.id) {
+            text += "You need administrator permission to access this bot. " +
+                    "Send /register command to request access.\n\n"
+        }
+        // text += "Source code: https://github.com/"
+        Methods.sendMessage()
+            .setChatId(message.from.id.toLong())
+            .setText(text)
+            .callAsync(this)
+    }
+
     private fun cmdRegister(message: Message) {
         val user = repository.findUserById(message.from.id)
         when (getAllowance(user)) {
@@ -159,10 +174,7 @@ class FavisBotHandler(
                         .callAsync(this)
             }
             ALLOWANCE_ALLOWED -> {
-                var guid = (user?.guid ?: "")
-                if (guid.isEmpty()) {
-                    guid = UUID.randomUUID().toString()
-                }
+                val guid = UUID.randomUUID().toString()
                 repository.upsertUser(DbUser(
                         id = message.from.id,
                         firstName = message.from.firstName,
@@ -171,7 +183,9 @@ class FavisBotHandler(
                         updatedAt = Instant.now().epochSecond
                 ))
                 Methods.sendMessage(message.from.id.toLong(),
-                        "Your token: {url} $guid")
+                        "Here's your link to the web page:\n" +
+                        "  {url} $guid\n" +
+                        "You can generate a new link by sending /register again.")
                         .callAsync(this)
             }
         }
