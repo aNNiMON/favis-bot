@@ -83,9 +83,10 @@ class FavisBotHandler(
     }
 
     private fun processInline(inlineQuery: InlineQuery) {
-        val user = repository.findUserById(inlineQuery.from.id) ?: return
-        if (user.allowed == ALLOWANCE_IGNORED) return
-        if (user.allowed != ALLOWANCE_ALLOWED) {
+        val user = repository.findUserById(inlineQuery.from.id)
+        val allowance = user?.allowed ?: ALLOWANCE_PENDING
+        if (allowance == ALLOWANCE_IGNORED) return
+        if (allowance != ALLOWANCE_ALLOWED) {
             val result = listOf(InlineQueryResultArticle().apply {
                 id = "3228"
                 title = "You don't have enough rights to access this bot"
@@ -93,9 +94,13 @@ class FavisBotHandler(
                     messageText = "You can request access to the bot by sending /register command in PM @${appConfig.botUsername}"
                 }
             })
-            Methods.answerInlineQuery(inlineQuery.id, result).call(this);
+            Methods.answerInlineQuery(inlineQuery.id, result)
+                    .setCacheTime(60)
+                    .setPersonal(true)
+                    .call(this);
             return
         }
+        if (user == null) return
         val entriesPerPage = 25
         val offset = inlineQuery.offset.toIntOrNull() ?: 0
         val query = inlineQuery.query
@@ -116,6 +121,8 @@ class FavisBotHandler(
             nextOffset = (offset + entriesPerPage).toString()
         }
         Methods.answerInlineQuery(inlineQuery.id, results)
+                .setCacheTime(100)
+                .setPersonal(true)
                 .setNextOffset(nextOffset)
                 .call(this)
     }
