@@ -38,7 +38,7 @@ class DbRepository(private val db: Database) {
             return false
         } else {
             db.sql("INSERT INTO savedItems(itemId, userId, tags) VALUES (?, ?, ?)",
-                   item.itemId, item.userId, item.tags)
+                    item.itemId, item.userId, item.tags)
                     .execute()
             return true
         }
@@ -127,6 +127,14 @@ class DbRepository(private val db: Database) {
               `tags`        TEXT NOT NULL,
               PRIMARY KEY (itemId, userId)
             )""".trimIndent()).execute()
-        // TODO index
+        // Index
+        db.sql("""
+            CREATE INDEX IF NOT EXISTS "idx_sticker" ON "items" (
+                "stickerSet" ASC
+            );""".trimIndent()).execute()
+        db.sql("""
+            CREATE UNIQUE INDEX IF NOT EXISTS "idx_guid" ON "users" (
+                "guid"
+            );""".trimIndent()).execute()
     }
 }
