@@ -12,8 +12,13 @@ import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery
 import org.telegram.telegrambots.meta.api.objects.inlinequery.inputmessagecontent.InputTextMessageContent
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultArticle
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.*
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedDocument
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedMpeg4Gif
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedPhoto
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedSticker
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedVideo
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedVoice
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.meta.api.objects.stickers.StickerSet
@@ -33,6 +38,11 @@ class FavisBotHandler(
     override fun onUpdate(update: Update): BotApiMethod<*>? {
         if (update.hasMessage() && update.message.hasText()) {
             val message = update.message
+            val reply = message.replyToMessage
+            if (reply != null) {
+                processReply(message, reply)
+                return null
+            } 
             val (command, _) = message.text.split(" ".toRegex(), 2)
             when (command.toLowerCase()) {
                 "/start" -> cmdStart(message)
@@ -101,6 +111,7 @@ class FavisBotHandler(
             return
         }
         if (user == null) return
+
         val entriesPerPage = 25
         val offset = inlineQuery.offset.toIntOrNull() ?: 0
         val query = inlineQuery.query
@@ -110,9 +121,25 @@ class FavisBotHandler(
                 id = it.id.hashCode().toString()
                 stickerFileId = it.id
             }
-            "animation" -> InlineQueryResultCachedMpeg4Gif().apply {
+            "animation", "gif" -> InlineQueryResultCachedMpeg4Gif().apply {
                 id = it.id.hashCode().toString()
                 mpeg4FileId = it.id
+            }
+            "document" -> InlineQueryResultCachedDocument().apply {
+                id = it.id.hashCode().toString()
+                documentFileId = it.id
+            }
+            "photo" -> InlineQueryResultCachedPhoto().apply {
+                id = it.id.hashCode().toString()
+                photoFileId = it.id
+            }
+            "video" -> InlineQueryResultCachedVideo().apply {
+                id = it.id.hashCode().toString()
+                videoFileId = it.id
+            }
+            "voice" -> InlineQueryResultCachedVoice().apply {
+                id = it.id.hashCode().toString()
+                voiceFileId = it.id
             }
             else -> null
         } }
@@ -198,6 +225,37 @@ class FavisBotHandler(
                         .callAsync(this)
             }
         }
+    }
+
+    private fun processReply(message: Message, reply: Message) {
+        val text = message.text ?: ""
+        if (text == "") return
+
+        // Get type and fileId
+        var info = Pair("", "")
+        reply.animation?.let { info = Pair("animation", it.fileId) }
+        reply.document?.let { info = Pair("document", it.fileId) }
+        reply.document?.takeIf { it.mimeType == "video/mp4" } ?.let { info = Pair("gif", it.fileId) }
+        reply.photo?.maxBy { it.width * it.height } ?.let { info = Pair("photo", it.fileId) }
+        reply.video?.let { info = Pair("video", it.fileId) }
+        reply.voice?.let { info = Pair("voice", it.fileId) }
+        val (type, fileId) = info
+        if (type == "") return
+
+        // Add or remove savedItem
+        val savedItem = DbSavedItem(fileId, message.from.id, text)
+        val msg = if (text in arrayOf("/rm", "/del")) {
+            repository.removeSavedItemIfExists(savedItem)
+            type.capitalize() + " removed."
+        } else {
+            // Add item if not exists
+            if (!repository.isItemExists(fileId)) {
+                repository.addItem(DbItem(fileId, type, "", 0))
+            }
+            repository.upsertSavedItem(savedItem)
+            type.capitalize() + " added.\nTo remove it, just reply to it again with command /rm or /del."
+        }
+        Methods.sendMessage(message.from.id.toLong(), msg).callAsync(this)
     }
 
     private fun processSticker(message: Message) {
