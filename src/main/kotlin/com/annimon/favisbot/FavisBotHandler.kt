@@ -42,7 +42,7 @@ class FavisBotHandler(
             if (reply != null) {
                 processReply(message, reply)
                 return null
-            } 
+            }
             val (command, _) = message.text.split(" ".toRegex(), 2)
             when (command.toLowerCase()) {
                 "/start" -> cmdStart(message)
@@ -92,25 +92,38 @@ class FavisBotHandler(
                 .callAsync(this)
     }
 
+    private fun answerInlineNoResults(inlineQueryId: String) {
+        answerInlineWithText(inlineQueryId, "No results", "There are no results for your query")
+    }
+
+    private fun answerInlineWithText(inlineQueryId: String, text: String, message: String?) {
+        val result = listOf(InlineQueryResultArticle().apply {
+            id = text.hashCode().toString()
+            title = text
+            inputMessageContent = InputTextMessageContent().apply {
+                messageText = message ?: text
+            }
+        })
+        Methods.answerInlineQuery(inlineQueryId, result)
+                .setCacheTime(60)
+                .setPersonal(true)
+                .call(this);
+    }
+
     private fun processInline(inlineQuery: InlineQuery) {
         val user = repository.findUserById(inlineQuery.from.id)
         val allowance = user?.allowed ?: ALLOWANCE_PENDING
         if (allowance == ALLOWANCE_IGNORED) return
         if (allowance != ALLOWANCE_ALLOWED) {
-            val result = listOf(InlineQueryResultArticle().apply {
-                id = "3228"
-                title = "You don't have enough rights to access this bot"
-                inputMessageContent = InputTextMessageContent().apply {
-                    messageText = "You can request access to the bot by sending /register command in PM @${appConfig.botUsername}"
-                }
-            })
-            Methods.answerInlineQuery(inlineQuery.id, result)
-                    .setCacheTime(60)
-                    .setPersonal(true)
-                    .call(this);
+            answerInlineWithText(inlineQuery.id,
+                    "You don't have enough rights to access this bot",
+                    "You can request access to the bot by sending /register command in PM @${appConfig.botUsername}")
             return
         }
-        if (user == null) return
+        if (user == null) {
+            answerInlineNoResults(inlineQuery.id)
+            return
+        }
 
         val entriesPerPage = 25
         val offset = inlineQuery.offset.toIntOrNull() ?: 0
@@ -143,6 +156,10 @@ class FavisBotHandler(
             }
             else -> null
         } }
+        if (results.isEmpty()) {
+            answerInlineNoResults(inlineQuery.id)
+            return
+        }
         var nextOffset = ""
         if (offset + entriesPerPage < count) {
             nextOffset = (offset + entriesPerPage).toString()
