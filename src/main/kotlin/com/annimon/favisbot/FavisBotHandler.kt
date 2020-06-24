@@ -12,7 +12,6 @@ import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery
 import org.telegram.telegrambots.meta.api.objects.inlinequery.inputmessagecontent.InputTextMessageContent
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultArticle
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.*
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedDocument
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedMpeg4Gif
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedPhoto
@@ -107,7 +106,7 @@ class FavisBotHandler(
         Methods.answerInlineQuery(inlineQueryId, result)
                 .setCacheTime(60)
                 .setPersonal(true)
-                .call(this);
+                .call(this)
     }
 
     private fun processInline(inlineQuery: InlineQuery) {
@@ -250,12 +249,12 @@ class FavisBotHandler(
 
         // Get type and fileId
         var info = Pair("", "")
-        reply.animation?.let { info = Pair("animation", it.fileId) }
-        reply.document?.let { info = Pair("document", it.fileId) }
-        reply.document?.takeIf { it.mimeType == "video/mp4" } ?.let { info = Pair("gif", it.fileId) }
-        reply.photo?.maxBy { it.width * it.height } ?.let { info = Pair("photo", it.fileId) }
-        reply.video?.let { info = Pair("video", it.fileId) }
-        reply.voice?.let { info = Pair("voice", it.fileId) }
+        reply.animation?.let { info = "animation" to it.fileId }
+        reply.document?.let { info = "document" to it.fileId }
+        reply.document?.takeIf { it.mimeType == "video/mp4" } ?.let { info = "gif" to it.fileId }
+        reply.photo?.maxBy { it.width * it.height } ?.let { info = "photo" to it.fileId }
+        reply.video?.let { info = "video" to it.fileId }
+        reply.voice?.let { info = "voice" to it.fileId }
         val (type, fileId) = info
         if (type == "") return
 
@@ -275,6 +274,7 @@ class FavisBotHandler(
         Methods.sendMessage(message.from.id.toLong(), msg).callAsync(this)
     }
 
+    @Suppress("FoldInitializerAndIfToElvis")
     private fun processSticker(message: Message) {
         val setName = message.sticker.setName
         val stickerSet = Methods.Stickers.getStickerSet(setName).call(this)
