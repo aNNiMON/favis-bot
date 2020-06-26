@@ -127,7 +127,7 @@ class FavisBotHandler(
         val entriesPerPage = 25
         val offset = inlineQuery.offset.toIntOrNull() ?: 0
         val query = inlineQuery.query
-        val (count, items) = repository.searchItems(query, inlineQuery.from.id)
+        val (count, items) = repository.searchItems(query, inlineQuery.from.id, entriesPerPage, offset)
         val results = items.mapNotNull { when (it.type) {
             "sticker" -> InlineQueryResultCachedSticker().apply {
                 id = it.id.hashCode().toString()
