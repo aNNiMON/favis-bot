@@ -194,7 +194,7 @@ class FavisBotHandler(
                 repository.upsertUser(DbUser(
                         id = message.from.id,
                         firstName = message.from.firstName,
-                        guid = "",
+                        guid =  message.from.id.toString(),
                         allowed = ALLOWANCE_PENDING,
                         updatedAt = Instant.now().epochSecond
                 ))
