@@ -69,6 +69,7 @@ class DbRepository(private val db: Database) {
     fun findAllStickerSets(): List<String> =
             db.sql("""
                 SELECT `stickerSet` FROM items
+                WHERE stickerSet != ""
                 GROUP BY `stickerSet`
                 ORDER BY `stickerSet`
                 """.trimIndent())
