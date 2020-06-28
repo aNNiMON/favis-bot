@@ -20,6 +20,9 @@ class DbRepository(private val db: Database) {
             item.itemId, item.userId)
             .first(Int::class.java) != 0
 
+    /**
+     * @return true - element was exists, false - otherwise
+     */
     fun removeSavedItemIfExists(item: DbSavedItem): Boolean {
         if (isSavedItemExists(item)) {
             db.table("savedItems")
@@ -30,37 +33,53 @@ class DbRepository(private val db: Database) {
         return false
     }
 
+    /**
+     * @return true - new element, false - update old
+     */
     fun upsertSavedItem(item: DbSavedItem): Boolean {
-        if (isSavedItemExists(item)) {
-            db.sql("UPDATE savedItems SET tags = ? WHERE itemId = ? AND userId = ?",
-                    item.tags, item.itemId, item.userId)
-                    .execute()
-            return false
-        } else {
-            db.sql("INSERT INTO savedItems(itemId, userId, tags) VALUES (?, ?, ?)",
-                    item.itemId, item.userId, item.tags)
-                    .execute()
-            return true
-        }
+        val wasExists = removeSavedItemIfExists(item)
+        item.tag.split(",")
+                .map { it.trim() }
+                .distinctBy { it.toLowerCase() }
+                .forEach { tag ->
+                    db.sql("INSERT INTO savedItems(itemId, userId, tag) VALUES (?, ?, ?)",
+                            item.itemId, item.userId, tag)
+                            .execute()
+                }
+        return !wasExists
     }
 
-    fun searchItems(q: String, userId: Int, limit: Int, offset: Int): Pair<Int, List<DbItemWithTags>> {
-        val query = q.replace("[;:\"'`]".toRegex(), "").replace("%", "\\%")
+    fun searchItems(q: String, userId: Int, limit: Int, offset: Int): Pair<Int, List<DbItemWithTag>> {
+        val isExact = q.endsWith(".")
+        var query = q.replace("[;:\"'`]".toRegex(), "")
+        
         val columns = "`id`, `type`, `animated`"
-        val sql = """
-                FROM items
-                INNER JOIN savedItems
-                    ON savedItems.itemId = items.id AND savedItems.userId = ?
-                """.trimIndent()
-        return if (query.isBlank() || query == ".all") {
-            val count = db.sql("SELECT COUNT(*) $sql", userId).first(Int::class.java)
-            val items = db.sql("SELECT $columns $sql LIMIT $limit OFFSET $offset", userId).results(DbItemWithTags::class.java)
-            Pair(count, items)
-        } else {
-            val where = "WHERE tags LIKE ?"
-            val count = db.sql("SELECT COUNT(*) $sql $where", userId, "%$q%").first(Int::class.java)
-            val items = db.sql("SELECT $columns $sql $where LIMIT $limit OFFSET $offset", userId, "%$q%").results(DbItemWithTags::class.java)
-            Pair(count, items)
+        val tablesSql = "FROM items INNER JOIN savedItems si ON si.itemId = items.id AND si.userId = ?"
+        val limitSql = "LIMIT $limit OFFSET $offset"
+        return when {
+            query.isBlank() || query == ".all" -> {
+                val count = db.sql("SELECT COUNT(DISTINCT id) $tablesSql", userId).first(Int::class.java)
+                val items = db.sql("SELECT $columns $tablesSql GROUP BY id $limitSql", userId)
+                        .results(DbItemWithTag::class.java)
+                Pair(count, items)
+            }
+            isExact -> {
+                query = query.trimEnd('.')
+                val searchSql = "WHERE tag = ?"
+                val count = db.sql("SELECT COUNT(DISTINCT id) $tablesSql $searchSql", userId, query).first(Int::class.java)
+                val items = db.sql("SELECT $columns $tablesSql $searchSql $limitSql", userId, query)
+                        .results(DbItemWithTag::class.java)
+                Pair(count, items)
+            }
+            else -> {
+                query = "%" + query.replace("%", "\\%") + "%"
+                val searchSql = "WHERE tag LIKE ? GROUP BY id"
+                val innerSql = "SELECT DISTINCT id $tablesSql $searchSql"
+                val count = db.sql("SELECT COUNT(*) FROM ( $innerSql ) AS tbl", userId, query).first(Int::class.java)
+                val items = db.sql("SELECT $columns $tablesSql $searchSql $limitSql", userId, query)
+                        .results(DbItemWithTag::class.java)
+                Pair(count, items)
+            }
         }
     }
 
@@ -75,14 +94,15 @@ class DbRepository(private val db: Database) {
                 """.trimIndent())
             .results(String::class.java)
 
-    fun findAllByStickerSet(userId: Int, stickerSet: String): List<DbItemWithTags> =
+    fun findAllByStickerSet(userId: Int, stickerSet: String): List<DbItemWithTag> =
             db.sql("""
-                SELECT items.*, savedItems.tags FROM items
+                SELECT items.*, GROUP_CONCAT(savedItems.tag, ", ") as tag FROM items
                 LEFT JOIN savedItems
                   ON savedItems.itemId = items.id AND savedItems.userId = ?
-                WHERE stickerSet = ?
+                GROUP BY id
+                HAVING stickerSet = ?
                 """.trimIndent(), userId, stickerSet)
-            .results(DbItemWithTags::class.java)
+            .results(DbItemWithTag::class.java)
 
     // Users
 
@@ -125,8 +145,7 @@ class DbRepository(private val db: Database) {
             CREATE TABLE IF NOT EXISTS savedItems (
               `itemId`      TEXT NOT NULL,
               `userId`      INTEGER NOT NULL,
-              `tags`        TEXT NOT NULL,
-              PRIMARY KEY (itemId, userId)
+              `tag`         TEXT NOT NULL
             )""".trimIndent()).execute()
         // Index
         db.sql("""
@@ -136,6 +155,10 @@ class DbRepository(private val db: Database) {
         db.sql("""
             CREATE UNIQUE INDEX IF NOT EXISTS "idx_guid" ON "users" (
                 "guid"
+            );""".trimIndent()).execute()
+        db.sql("""
+            CREATE INDEX IF NOT EXISTS "idx_userItem" ON "savedItems" (
+                "itemId", "userId"
             );""".trimIndent()).execute()
     }
 }

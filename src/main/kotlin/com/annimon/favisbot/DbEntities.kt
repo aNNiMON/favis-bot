@@ -14,12 +14,12 @@ data class DbItem(
     constructor() : this("", "", "", 0)
 }
 
-data class DbItemWithTags(
+data class DbItemWithTag(
     var id: String,
     var type: String,
     var stickerSet: String?,
     var animated: Int,
-    var tags: String?
+    var tag: String?
 ) {
     constructor() : this("", "", "", 0, "")
 }
@@ -47,7 +47,7 @@ data class DbUser(
 data class DbSavedItem(
     var itemId: String,
     var userId: Int,
-    var tags: String
+    var tag: String
 ) {
     constructor() : this("", 0, "")
 }
