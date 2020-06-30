@@ -52,7 +52,7 @@ class DbRepository(private val db: Database) {
     fun searchItems(q: String, userId: Int, limit: Int, offset: Int): Pair<Int, List<DbItemWithTag>> {
         val isExact = q.endsWith(".")
         var query = q.replace("[;:\"'`]".toRegex(), "")
-        
+
         val columns = "`id`, `type`, `animated`"
         val tablesSql = "FROM items INNER JOIN savedItems si ON si.itemId = items.id AND si.userId = ?"
         val limitSql = "LIMIT $limit OFFSET $offset"
@@ -85,17 +85,16 @@ class DbRepository(private val db: Database) {
 
     // Sets
 
-    fun findAllSets(): List<String> =
+    fun findAllUserSets(userId: Int): List<String> =
+            listOf("!gif") +
             db.sql("""
-                SELECT ("!" || `type`) as `set` FROM items
-                WHERE `type` IN ("gif")
-                UNION
-                SELECT `stickerSet` as `set` FROM items
-                WHERE stickerSet != ""
-                GROUP BY `set`
-                ORDER BY `set`
-                """.trimIndent())
-            .results(String::class.java)
+                SELECT `stickerSet` as setName FROM items
+                INNER JOIN userSets ON items.stickerSet = userSets.setName
+                WHERE stickerSet != "" AND userSets.userId = ?
+                GROUP BY setName
+                ORDER BY userSets.updatedAt DESC, setName
+                """.trimIndent(), userId)
+                .results(String::class.java)
 
     fun findAllByStickerSet(userId: Int, set: String): List<DbItemWithTag> =
             db.sql("""
@@ -110,11 +109,13 @@ class DbRepository(private val db: Database) {
     fun findAllByType(userId: Int, type: String): List<DbItemWithTag> =
             db.sql("""
                 SELECT items.*, GROUP_CONCAT(savedItems.tag, ", ") as tag FROM items
+                INNER JOIN userSets
+                  ON items.id = userSets.setName AND userSets.userId = ?
                 LEFT JOIN savedItems
                   ON savedItems.itemId = items.id AND savedItems.userId = ?
                 GROUP BY id
                 HAVING `type` = ?
-                """.trimIndent(), userId, type)
+                """.trimIndent(), userId, userId, type)
                 .results(DbItemWithTag::class.java)
 
     // Users
@@ -160,6 +161,12 @@ class DbRepository(private val db: Database) {
               `userId`      INTEGER NOT NULL,
               `tag`         TEXT NOT NULL
             )""".trimIndent()).execute()
+        db.sql("""
+            CREATE TABLE IF NOT EXISTS userSets (
+              `setName`     TEXT NOT NULL,
+              `userId`      INTEGER NOT NULL,
+              `updatedAt`   INTEGER NOT NULL
+            )""".trimIndent()).execute()
         // Index
         db.sql("""
             CREATE INDEX IF NOT EXISTS "idx_sticker" ON "items" (
@@ -172,6 +179,10 @@ class DbRepository(private val db: Database) {
         db.sql("""
             CREATE INDEX IF NOT EXISTS "idx_userItem" ON "savedItems" (
                 "itemId", "userId"
+            );""".trimIndent()).execute()
+        db.sql("""
+            CREATE INDEX IF NOT EXISTS "idx_userSet" ON "userSets" (
+                "setName"
             );""".trimIndent()).execute()
     }
 }

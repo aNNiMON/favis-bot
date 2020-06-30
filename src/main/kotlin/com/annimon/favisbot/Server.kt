@@ -32,7 +32,7 @@ class Server(private val appConfig: AppConfig,
     private fun getMeta(ctx: @NotNull Context) {
         val user = repository.findUserByGUID(ctx.pathParam("guid"))
         val sets = if (user == null) emptyList()
-                   else repository.findAllSets()
+                   else repository.findAllUserSets(user.id)
         ctx.json(hashMapOf(
                 "appName" to (appConfig.appName ?: appConfig.botUsername),
                 "bot" to appConfig.botUsername,
