@@ -1,13 +1,14 @@
 package com.annimon.favisbot
 
 import io.javalin.Javalin
-import io.javalin.apibuilder.ApiBuilder
+import io.javalin.apibuilder.ApiBuilder.*
 import io.javalin.http.Context
 import io.javalin.http.staticfiles.Location
 import org.jetbrains.annotations.NotNull
 import kotlin.math.min
 
-class Server(val appConfig: AppConfig, val repository: DbRepository) {
+class Server(private val appConfig: AppConfig,
+             private val repository: DbRepository) {
 
     fun start() {
         val app = Javalin.create {
@@ -18,51 +19,70 @@ class Server(val appConfig: AppConfig, val repository: DbRepository) {
         }.start(appConfig.port ?: 9377)
 
         app.routes {
-            ApiBuilder.get("/meta/:guid") { ctx ->
-                val user = repository.findUserByGUID(ctx.pathParam("guid"))
-                val sets = if (user == null) emptyList()
-                else repository.findAllStickerSets()
-                ctx.json(hashMapOf(
-                        "appName" to (appConfig.appName ?: appConfig.botUsername),
-                        "bot" to appConfig.botUsername,
-                        "user" to (user?.firstName ?: ""),
-                        "stickerSets" to sets
-                ))
-            }
+            get("/meta/:guid", ::getMeta)
+            before(::authUserByGUID)
+            get("/items/:set", ::getItemsInSet)
+            post("/items", ::updateSavedItem)
+        }
+    }
 
-            ApiBuilder.before { ctx ->
-                if (!ctx.path().startsWith("/items"))
-                    return@before
-                val guid = ctx.header("guid") ?: ""
-                if (guid.isEmpty()) {
-                    ctx.status(401)
-                    return@before
-                }
-                val user = repository.findUserByGUID(guid)
-                if (user == null) {
-                    ctx.status(401)
-                    return@before
-                }
-                ctx.attribute("user", user)
-            }
-            ApiBuilder.get("/items/:stickerSet") { ctx ->
-                val stickerSet = ctx.pathParam("stickerSet")
-                val user: DbUser = ctx.attribute("user")!!
-                ctx.json(repository.findAllByStickerSet(user.id, stickerSet))
-            }
-            ApiBuilder.post("/items") { ctx ->
-                val body = ctx.body<BodyItem>()
-                val user: DbUser = ctx.attribute("user")!!
-                val savedItem = DbSavedItem(body.id, user.id, body.tags)
-                if (body.tags.isBlank()) {
-                    val removed = repository.removeSavedItemIfExists(savedItem)
-                    ctx.status(if (removed) 205 else 204)
-                } else {
-                    body.tags = body.tags.substring(0, min(body.tags.length, 255))
-                    val created = repository.upsertSavedItem(savedItem)
-                    ctx.status(if (created) 201 else 200)
-                }
-            }
+    /**
+     * Returns meta info: app and bot names, user info, set names
+     */
+    private fun getMeta(ctx: @NotNull Context) {
+        val user = repository.findUserByGUID(ctx.pathParam("guid"))
+        val sets = if (user == null) emptyList()
+        else repository.findAllStickerSets()
+        ctx.json(hashMapOf(
+                "appName" to (appConfig.appName ?: appConfig.botUsername),
+                "bot" to appConfig.botUsername,
+                "user" to (user?.firstName ?: ""),
+                "stickerSets" to sets
+        ))
+    }
+
+    /**
+     * Finds a user by guid or denies the request
+     */
+    private fun authUserByGUID(ctx: @NotNull Context) {
+        if (!ctx.path().startsWith("/items"))
+            return
+        val guid = ctx.header("guid") ?: ""
+        if (guid.isEmpty()) {
+            ctx.status(401)
+            return
+        }
+        val user = repository.findUserByGUID(guid)
+        if (user == null) {
+            ctx.status(401)
+            return
+        }
+        ctx.attribute("user", user)
+    }
+
+    /**
+     * Returns items in set with user tags
+     */
+    private fun getItemsInSet(ctx: @NotNull Context) {
+        val setName = ctx.pathParam("set")
+        val user: DbUser = ctx.attribute("user")!!
+        ctx.json(repository.findAllByStickerSet(user.id, setName))
+    }
+
+    /**
+     * Update or remove item
+     */
+    private fun updateSavedItem(ctx: @NotNull Context) {
+        val body = ctx.body<BodyItem>()
+        val user: DbUser = ctx.attribute("user")!!
+        val savedItem = DbSavedItem(body.id, user.id, body.tags)
+        if (body.tags.isBlank()) {
+            val removed = repository.removeSavedItemIfExists(savedItem)
+            ctx.status(if (removed) 205 else 204)
+        } else {
+            body.tags = body.tags.substring(0, min(body.tags.length, 255))
+            val created = repository.upsertSavedItem(savedItem)
+            ctx.status(if (created) 201 else 200)
         }
     }
 
