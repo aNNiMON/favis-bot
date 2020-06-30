@@ -6,7 +6,8 @@ Vue.component('sticker', {
       this.$emit('save', this.item)
     },
     thumbUrl: function(item) {
-      return '/thumbs/' + item.stickerSet + '/' + item.id + '.png';
+      let set = (item.type == 'sticker') ? item.stickerSet : ('!' + item.type);
+      return '/thumbs/' + set + '/' + item.id + '.png';
     }
   }
 })
@@ -58,7 +59,7 @@ const app = new Vue({
         },
         body: JSON.stringify({
           id: item.id,
-          tags: item.tags || ""
+          tags: item.tag || ""
         })
       }).then(resp => {
         item.wait = false

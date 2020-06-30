@@ -32,7 +32,7 @@ class Server(private val appConfig: AppConfig,
     private fun getMeta(ctx: @NotNull Context) {
         val user = repository.findUserByGUID(ctx.pathParam("guid"))
         val sets = if (user == null) emptyList()
-        else repository.findAllStickerSets()
+                   else repository.findAllSets()
         ctx.json(hashMapOf(
                 "appName" to (appConfig.appName ?: appConfig.botUsername),
                 "bot" to appConfig.botUsername,
@@ -66,7 +66,11 @@ class Server(private val appConfig: AppConfig,
     private fun getItemsInSet(ctx: @NotNull Context) {
         val setName = ctx.pathParam("set")
         val user: DbUser = ctx.attribute("user")!!
-        ctx.json(repository.findAllByStickerSet(user.id, setName))
+        if (setName.startsWith("!")) {
+            ctx.json(repository.findAllByType(user.id, setName.trimStart('!')))
+        } else {
+            ctx.json(repository.findAllByStickerSet(user.id, setName))
+        }
     }
 
     /**

@@ -83,26 +83,39 @@ class DbRepository(private val db: Database) {
         }
     }
 
-    // Stickers
+    // Sets
 
-    fun findAllStickerSets(): List<String> =
+    fun findAllSets(): List<String> =
             db.sql("""
-                SELECT `stickerSet` FROM items
+                SELECT ("!" || `type`) as `set` FROM items
+                WHERE `type` IN ("gif")
+                UNION
+                SELECT `stickerSet` as `set` FROM items
                 WHERE stickerSet != ""
-                GROUP BY `stickerSet`
-                ORDER BY `stickerSet`
+                GROUP BY `set`
+                ORDER BY `set`
                 """.trimIndent())
             .results(String::class.java)
 
-    fun findAllByStickerSet(userId: Int, stickerSet: String): List<DbItemWithTag> =
+    fun findAllByStickerSet(userId: Int, set: String): List<DbItemWithTag> =
             db.sql("""
                 SELECT items.*, GROUP_CONCAT(savedItems.tag, ", ") as tag FROM items
                 LEFT JOIN savedItems
                   ON savedItems.itemId = items.id AND savedItems.userId = ?
                 GROUP BY id
                 HAVING stickerSet = ?
-                """.trimIndent(), userId, stickerSet)
-            .results(DbItemWithTag::class.java)
+                """.trimIndent(), userId, set)
+                .results(DbItemWithTag::class.java)
+
+    fun findAllByType(userId: Int, type: String): List<DbItemWithTag> =
+            db.sql("""
+                SELECT items.*, GROUP_CONCAT(savedItems.tag, ", ") as tag FROM items
+                LEFT JOIN savedItems
+                  ON savedItems.itemId = items.id AND savedItems.userId = ?
+                GROUP BY id
+                HAVING `type` = ?
+                """.trimIndent(), userId, type)
+                .results(DbItemWithTag::class.java)
 
     // Users
 
