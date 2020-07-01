@@ -6,6 +6,8 @@ import com.annimon.favisbot.DbUser.Companion.ALLOWANCE_PENDING
 import com.annimon.favisbot.DbUser.Companion.ALLOWANCE_UNKNOWN
 import com.annimon.tgbotsmodule.BotHandler
 import com.annimon.tgbotsmodule.api.methods.Methods
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.PhotoSize
@@ -13,12 +15,7 @@ import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery
 import org.telegram.telegrambots.meta.api.objects.inlinequery.inputmessagecontent.InputTextMessageContent
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultArticle
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedDocument
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedMpeg4Gif
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedPhoto
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedSticker
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedVideo
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.InlineQueryResultCachedVoice
+import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.*
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.meta.api.objects.stickers.StickerSet
@@ -30,6 +27,10 @@ class FavisBotHandler(
     private val appConfig: AppConfig,
     private val repository: DbRepository
 ) : BotHandler() {
+
+    companion object {
+        private val log: Logger = LoggerFactory.getLogger(FavisBotHandler::class.java)
+    }
 
     override fun getBotUsername() = appConfig.botUsername
 
@@ -51,6 +52,7 @@ class FavisBotHandler(
             when (command.toLowerCase()) {
                 "/start" -> cmdStart(message)
                 "/register" -> cmdRegister(message)
+                else -> log.info("Unknown command: $command")
             }
             return null
         }
@@ -61,6 +63,11 @@ class FavisBotHandler(
         if (update.hasMessage()) {
             processMedia(update.message)
             return null
+        }
+
+        if (update.hasChosenInlineQuery()) {
+            // TODO rating
+            log.info("Chosen inline query: ${update.chosenInlineQuery}")
         }
         return null
     }
@@ -111,16 +118,13 @@ class FavisBotHandler(
 
     private fun processInline(inlineQuery: InlineQuery) {
         val user = repository.findUserById(inlineQuery.from.id)
-        val allowance = user?.allowed ?: ALLOWANCE_PENDING
+        val allowance = getAllowance(user)
         if (allowance == ALLOWANCE_IGNORED) return
         if (allowance != ALLOWANCE_ALLOWED) {
+            log.info("processInline: by unknown ${inlineQuery.from.id}")
             answerInlineWithText(inlineQuery.id,
                     "You don't have enough rights to access this bot",
                     "You can request access to the bot by sending /register command in PM @${appConfig.botUsername}")
-            return
-        }
-        if (user == null) {
-            answerInlineNoResults(inlineQuery.id)
             return
         }
 
@@ -171,6 +175,7 @@ class FavisBotHandler(
     }
 
     private fun cmdStart(message: Message) {
+        log.info("cmdStart: by ${message.from.id}")
         var text = "With this bot you can send your favorite stickers in inline mode. " +
                    "You can define tags in a web-form, then search stickers by these tags.\n\n"
         if (appConfig.adminId != message.from.id) {
@@ -190,6 +195,7 @@ class FavisBotHandler(
             ALLOWANCE_IGNORED -> return
             ALLOWANCE_PENDING -> return
             ALLOWANCE_UNKNOWN -> {
+                log.info("cmdRegister: by unknown ${message.from.id}")
                 // send request to admin
                 repository.upsertUser(DbUser(
                         id = message.from.id,
@@ -224,6 +230,7 @@ class FavisBotHandler(
                         .callAsync(this)
             }
             ALLOWANCE_ALLOWED -> {
+                log.info("cmdRegister: by allowed ${message.from.id}")
                 val guid = UUID.randomUUID().toString()
                 repository.upsertUser(DbUser(
                         id = message.from.id,
@@ -244,8 +251,9 @@ class FavisBotHandler(
     }
 
     private fun processMedia(message: Message) {
-        val (type, fileId, thumb) = getMediaInfo(message) ?: return
+        val (type, fileId, uniqueId, thumb) = getMediaInfo(message) ?: return
         if (type.isEmpty()) return
+        log.info("processMedia: $type $fileId (unique: $uniqueId)")
         if (thumb == null) {
             val msg = "Media without thumbnails are not supported yet"
             Methods.sendMessage(message.from.id.toLong(), msg).callAsync(this)
@@ -268,24 +276,24 @@ class FavisBotHandler(
         Methods.sendMessage(message.from.id.toLong(), msg).callAsync(this)
     }
 
-    data class MediaInfo(val type: String, val fileId: String, val thumb: PhotoSize?)
+    data class MediaInfo(val type: String, val fileId: String, val uniqueId: String, val thumb: PhotoSize?)
 
     private fun getMediaInfo(msg: Message): MediaInfo? {
-        msg.animation?.let { return MediaInfo("animation", it.fileId, it.thumb) }
-        msg.document ?.let { return MediaInfo("document", it.fileId, it.thumb) }
+        msg.animation?.let { return MediaInfo("animation", it.fileId, it.fileUniqueId, it.thumb) }
+        msg.document?.let { return MediaInfo("document", it.fileId, it.fileUniqueId, it.thumb) }
         msg.document
                 ?.takeIf { it.mimeType == "video/mp4" }
                 ?.let {
-                    return MediaInfo("gif", it.fileId, it.thumb)
+                    return MediaInfo("gif", it.fileId, it.fileUniqueId, it.thumb)
                 }
         msg.photo
                 ?.maxBy { max -> max.width * max.height }
                 ?.let { max ->
                     val thumb = msg.photo.minBy { min -> min.width * min.height }
-                    return MediaInfo("photo", max.fileId, thumb)
+                    return MediaInfo("photo", max.fileId, max.fileUniqueId, thumb)
                 }
-        msg.video?.let { return MediaInfo("video", it.fileId, it.thumb) }
-        msg.voice?.let { return MediaInfo("voice", it.fileId, null) }
+        msg.video?.let { return MediaInfo("video", it.fileId, it.fileUniqueId, it.thumb) }
+        msg.voice?.let { return MediaInfo("voice", it.fileId, it.fileUniqueId, null) }
         return null
     }
 
@@ -304,6 +312,7 @@ class FavisBotHandler(
                 .map { DbItem(it.fileId, "sticker", stickerSet.name, if (it.animated) 1 else 0) }
                 .onEach { repository.addItem(it) }
                 .count()
+        log.info("processSticker: $setName added $newItemsCount of ${stickerSet.stickers.size}")
         val msg = "Sticker set added"
         Methods.sendMessage(message.from.id.toLong(), msg).call(this)
     }

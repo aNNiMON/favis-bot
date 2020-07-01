@@ -5,16 +5,22 @@ import io.javalin.apibuilder.ApiBuilder.*
 import io.javalin.http.Context
 import io.javalin.http.staticfiles.Location
 import org.jetbrains.annotations.NotNull
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import kotlin.math.min
 
 class Server(private val appConfig: AppConfig,
              private val repository: DbRepository) {
 
+    companion object {
+        private val log: Logger = LoggerFactory.getLogger(Server::class.java)
+    }
+
     fun start() {
         val app = Javalin.create {
             it.addStaticFiles("/", "public", Location.EXTERNAL)
         }.apply {
-            exception(Exception::class.java) { e, ctx -> e.printStackTrace() }
+            exception(Exception::class.java) { e, ctx -> log.error("javalin", e) }
             error(404) { ctx -> ctx.json("not found") }
         }.start(appConfig.port ?: 9377)
 
