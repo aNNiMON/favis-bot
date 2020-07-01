@@ -8,6 +8,7 @@ import com.annimon.tgbotsmodule.BotHandler
 import com.annimon.tgbotsmodule.api.methods.Methods
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.objects.Message
+import org.telegram.telegrambots.meta.api.objects.PhotoSize
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery
 import org.telegram.telegrambots.meta.api.objects.inlinequery.inputmessagecontent.InputTextMessageContent
@@ -35,13 +36,17 @@ class FavisBotHandler(
     override fun getBotToken() = appConfig.botToken
 
     override fun onUpdate(update: Update): BotApiMethod<*>? {
+        if (update.hasCallbackQuery() && update.callbackQuery.message != null) {
+            val params = (update.callbackQuery.data ?: "").split(":".toRegex())
+            processCallback(params, update.callbackQuery.message)
+            return null
+        }
+        if (update.hasInlineQuery()) {
+            processInline(update.inlineQuery)
+            return null
+        }
         if (update.hasMessage() && update.message.hasText()) {
             val message = update.message
-            val reply = message.replyToMessage
-            if (reply != null) {
-                processReply(message, reply)
-                return null
-            }
             val (command, _) = message.text.split(" ".toRegex(), 2)
             when (command.toLowerCase()) {
                 "/start" -> cmdStart(message)
@@ -53,13 +58,8 @@ class FavisBotHandler(
             processSticker(update.message)
             return null
         }
-        if (update.hasCallbackQuery() && update.callbackQuery.message != null) {
-            val params = (update.callbackQuery.data ?: "").split(":".toRegex())
-            processCallback(params, update.callbackQuery.message)
-            return null
-        }
-        if (update.hasInlineQuery()) {
-            processInline(update.inlineQuery)
+        if (update.hasMessage()) {
+            processMedia(update.message)
             return null
         }
         return null
@@ -243,35 +243,50 @@ class FavisBotHandler(
         }
     }
 
-    private fun processReply(message: Message, reply: Message) {
-        val text = message.text ?: ""
-        if (text == "") return
-
-        // Get type and fileId
-        var info = Pair("", "")
-        reply.animation?.let { info = "animation" to it.fileId }
-        reply.document?.let { info = "document" to it.fileId }
-        reply.document?.takeIf { it.mimeType == "video/mp4" } ?.let { info = "gif" to it.fileId }
-        reply.photo?.maxBy { it.width * it.height } ?.let { info = "photo" to it.fileId }
-        reply.video?.let { info = "video" to it.fileId }
-        reply.voice?.let { info = "voice" to it.fileId }
-        val (type, fileId) = info
-        if (type == "") return
-
-        // Add or remove savedItem
-        val savedItem = DbSavedItem(fileId, message.from.id, text)
-        val msg = if (text in arrayOf("/rm", "/del")) {
-            repository.removeSavedItemIfExists(savedItem)
-            type.capitalize() + " removed."
-        } else {
-            // Add item if not exists
-            if (!repository.isItemExists(fileId)) {
-                repository.addItem(DbItem(fileId, type, "", 0))
-            }
-            repository.upsertSavedItem(savedItem)
-            type.capitalize() + " added.\nTo remove it, just reply to it again with command /rm or /del."
+    private fun processMedia(message: Message) {
+        val (type, fileId, thumb) = getMediaInfo(message) ?: return
+        if (type.isEmpty()) return
+        if (thumb == null) {
+            val msg = "Media without thumbnails are not supported yet"
+            Methods.sendMessage(message.from.id.toLong(), msg).callAsync(this)
+            return
         }
+
+        // Add to global collection
+        if (!repository.isItemExists(fileId)) {
+            repository.addItem(DbItem(fileId, type, "", 0))
+        }
+
+        downloadThumbForMediaType(type, fileId, thumb.fileId)
+        val status = if (repository.isUserSetExists(fileId, message.from.id)) {
+            "already exists in your collection"
+        } else {
+            repository.addUserSet(DbUserSet(fileId, message.from.id, Instant.now().epochSecond))
+            "added to your collection"
+        }
+        val msg = type.capitalize() + " $status."
         Methods.sendMessage(message.from.id.toLong(), msg).callAsync(this)
+    }
+
+    data class MediaInfo(val type: String, val fileId: String, val thumb: PhotoSize?)
+
+    private fun getMediaInfo(msg: Message): MediaInfo? {
+        msg.animation?.let { return MediaInfo("animation", it.fileId, it.thumb) }
+        msg.document ?.let { return MediaInfo("document", it.fileId, it.thumb) }
+        msg.document
+                ?.takeIf { it.mimeType == "video/mp4" }
+                ?.let {
+                    return MediaInfo("gif", it.fileId, it.thumb)
+                }
+        msg.photo
+                ?.maxBy { max -> max.width * max.height }
+                ?.let { max ->
+                    val thumb = msg.photo.minBy { min -> min.width * min.height }
+                    return MediaInfo("photo", max.fileId, thumb)
+                }
+        msg.video?.let { return MediaInfo("video", it.fileId, it.thumb) }
+        msg.voice?.let { return MediaInfo("voice", it.fileId, null) }
+        return null
     }
 
     @Suppress("FoldInitializerAndIfToElvis")
@@ -279,15 +294,18 @@ class FavisBotHandler(
         val setName = message.sticker.setName
         val stickerSet = Methods.Stickers.getStickerSet(setName).call(this)
         if (stickerSet == null) return
+
+        if (!repository.isUserSetExists(setName, message.from.id)) {
+            repository.addUserSet(DbUserSet(setName, message.from.id, Instant.now().epochSecond))
+        }
         downloadThumbs(stickerSet)
         val newItemsCount = stickerSet.stickers
                 .filterNot { repository.isItemExists(it.fileId) }
                 .map { DbItem(it.fileId, "sticker", stickerSet.name, if (it.animated) 1 else 0) }
                 .onEach { repository.addItem(it) }
                 .count()
-        Methods.sendMessage(message.from.id.toLong(),
-                "Added $newItemsCount stickers")
-                .call(this)
+        val msg = "Sticker set added"
+        Methods.sendMessage(message.from.id.toLong(), msg).call(this)
     }
 
     private fun downloadThumbs(stickerSet: StickerSet) {
@@ -298,6 +316,14 @@ class FavisBotHandler(
             Methods.getFile(sticker.thumb.fileId)
                     .callAsync(this) { tgFile -> downloadFile(tgFile, localFile) }
         }
+    }
+
+    private fun downloadThumbForMediaType(type: String, fileId: String, thumbId: String) {
+        val parent = File("public/thumbs/!$type")
+        parent.mkdirs()
+        val localFile = File(parent, "${fileId}.png")
+        Methods.getFile(thumbId)
+                .callAsync(this) { tgFile -> downloadFile(tgFile, localFile) }
     }
 
     private fun getAllowance(user: DbUser?): Int {

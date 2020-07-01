@@ -86,7 +86,7 @@ class DbRepository(private val db: Database) {
     // Sets
 
     fun findAllUserSets(userId: Int): List<String> =
-            listOf("!gif") +
+            listOf("!animation", "!document", "!gif", "!photo", "!video") +
             db.sql("""
                 SELECT `stickerSet` as setName FROM items
                 INNER JOIN userSets ON items.stickerSet = userSets.setName
@@ -135,6 +135,19 @@ class DbRepository(private val db: Database) {
         } else {
             db.insert(user)
         }
+    }
+
+    // User sets
+
+    fun isUserSetExists(setName: String, userId: Int) =
+            db.sql("""
+                SELECT COUNT(*) FROM userSets
+                WHERE `setName` = ? AND userId = ?
+                """.trimIndent(), setName, userId)
+                .first(Int::class.java) != 0
+
+    fun addUserSet(userSet: DbUserSet) {
+        db.insert(userSet)
     }
 
     // Other

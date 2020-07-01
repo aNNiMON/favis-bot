@@ -1,5 +1,6 @@
 package com.annimon.favisbot
 
+import javax.persistence.Column
 import javax.persistence.Id
 import javax.persistence.Table
 
@@ -50,4 +51,13 @@ data class DbSavedItem(
     var tag: String
 ) {
     constructor() : this("", 0, "")
+}
+
+@Table(name = "userSets")
+data class DbUserSet(
+        var setName: String,
+        var userId: Int,
+        var updatedAt: Long
+) {
+    constructor() : this("", 0, 0)
 }
