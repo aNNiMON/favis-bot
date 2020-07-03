@@ -137,11 +137,11 @@ class FavisBotHandler(
                 id = it.id.hashCode().toString()
                 stickerFileId = it.id
             }
-            "animation", "gif" -> InlineQueryResultCachedMpeg4Gif().apply {
+            "animation" -> InlineQueryResultCachedMpeg4Gif().apply {
                 id = it.id.hashCode().toString()
                 mpeg4FileId = it.id
             }
-            "document" -> InlineQueryResultCachedDocument().apply {
+            "document", "gif" -> InlineQueryResultCachedDocument().apply {
                 id = it.id.hashCode().toString()
                 documentFileId = it.id
             }
@@ -282,7 +282,7 @@ class FavisBotHandler(
         msg.animation?.let { return MediaInfo("animation", it.fileId, it.fileUniqueId, it.thumb) }
         msg.document?.let { return MediaInfo("document", it.fileId, it.fileUniqueId, it.thumb) }
         msg.document
-                ?.takeIf { it.mimeType == "video/mp4" }
+                ?.takeIf { it.mimeType == "image/gif" }
                 ?.let {
                     return MediaInfo("gif", it.fileId, it.fileUniqueId, it.thumb)
                 }
