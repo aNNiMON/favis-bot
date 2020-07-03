@@ -1,6 +1,5 @@
 package com.annimon.favisbot
 
-import javax.persistence.Column
 import javax.persistence.Id
 import javax.persistence.Table
 
@@ -9,20 +8,22 @@ data class DbItem(
     @JvmField @Id
     var id: String,
     var type: String,
+    var uniqueId: String,
     var stickerSet: String?,
     var animated: Int
 ) {
-    constructor() : this("", "", "", 0)
+    constructor() : this("", "", "", "", 0)
 }
 
 data class DbItemWithTag(
     var id: String,
     var type: String,
+    var uniqueId: String,
     var stickerSet: String?,
     var animated: Int,
     var tag: String?
 ) {
-    constructor() : this("", "", "", 0, "")
+    constructor() : this("", "", "", "", 0, "")
 }
 
 @Table(name = "users")

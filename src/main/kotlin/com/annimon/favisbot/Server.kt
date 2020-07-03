@@ -85,7 +85,7 @@ class Server(private val appConfig: AppConfig,
     private fun updateSavedItem(ctx: @NotNull Context) {
         val body = ctx.body<BodyItem>()
         val user: DbUser = ctx.attribute("user")!!
-        val savedItem = DbSavedItem(body.id, user.id, body.tags)
+        val savedItem = DbSavedItem(body.uniqueId, user.id, body.tags)
         if (body.tags.isBlank()) {
             val removed = repository.removeSavedItemIfExists(savedItem)
             ctx.status(if (removed) 205 else 204)
@@ -96,5 +96,5 @@ class Server(private val appConfig: AppConfig,
         }
     }
 
-    data class BodyItem(val id: String, var tags: String)
+    data class BodyItem(val uniqueId: String, var tags: String)
 }

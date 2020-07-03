@@ -7,7 +7,7 @@ Vue.component('sticker', {
     },
     thumbUrl: function(item) {
       let set = (item.type == 'sticker') ? item.stickerSet : ('!' + item.type);
-      return '/thumbs/' + set + '/' + item.id + '.png';
+      return '/thumbs/' + set + '/' + item.uniqueId + '.png';
     }
   }
 })
@@ -58,7 +58,7 @@ const app = new Vue({
           'guid': this.accessKey
         },
         body: JSON.stringify({
-          id: item.id,
+          uniqueId: item.uniqueId,
           tags: item.tag || ""
         })
       }).then(resp => {

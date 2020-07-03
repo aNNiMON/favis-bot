@@ -32,7 +32,7 @@
             </div>
         </div>
         <div class="row">
-            <sticker v-for="item in items" :key="item.id"
+            <sticker v-for="item in items" :key="item.uniqueId"
                      :item="item" @save="save"></sticker>
         </div>
     </div>

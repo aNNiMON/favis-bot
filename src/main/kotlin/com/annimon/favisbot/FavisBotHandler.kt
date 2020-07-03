@@ -261,15 +261,21 @@ class FavisBotHandler(
         }
 
         // Add to global collection
-        if (!repository.isItemExists(fileId)) {
-            repository.addItem(DbItem(fileId, type, "", 0))
+        if (!repository.isItemExists(uniqueId)) {
+            repository.addItem(DbItem(
+                    id = fileId,
+                    type = type,
+                    uniqueId = uniqueId,
+                    stickerSet = "",
+                    animated = 0
+            ))
         }
 
-        downloadThumbForMediaType(type, fileId, thumb.fileId)
-        val status = if (repository.isUserSetExists(fileId, message.from.id)) {
+        downloadThumbForMediaType(type, uniqueId, thumb.fileId)
+        val status = if (repository.isUserSetExists(uniqueId, message.from.id)) {
             "already exists in your collection"
         } else {
-            repository.addUserSet(DbUserSet(fileId, message.from.id, Instant.now().epochSecond))
+            repository.addUserSet(DbUserSet(uniqueId, message.from.id, Instant.now().epochSecond))
             "added to your collection"
         }
         val msg = type.capitalize() + " $status."
@@ -308,8 +314,14 @@ class FavisBotHandler(
         }
         downloadThumbs(stickerSet)
         val newItemsCount = stickerSet.stickers
-                .filterNot { repository.isItemExists(it.fileId) }
-                .map { DbItem(it.fileId, "sticker", stickerSet.name, if (it.animated) 1 else 0) }
+                .filterNot { repository.isItemExists(it.fileUniqueId) }
+                .map { DbItem(
+                        id = it.fileId,
+                        type = "sticker",
+                        uniqueId = it.fileUniqueId,
+                        stickerSet = stickerSet.name,
+                        animated = if (it.animated) 1 else 0
+                ) }
                 .onEach { repository.addItem(it) }
                 .count()
         log.info("processSticker: $setName added $newItemsCount of ${stickerSet.stickers.size}")
@@ -327,10 +339,10 @@ class FavisBotHandler(
         }
     }
 
-    private fun downloadThumbForMediaType(type: String, fileId: String, thumbId: String) {
+    private fun downloadThumbForMediaType(type: String, filename: String, thumbId: String) {
         val parent = File("public/thumbs/!$type")
         parent.mkdirs()
-        val localFile = File(parent, "${fileId}.png")
+        val localFile = File(parent, "${filename}.png")
         Methods.getFile(thumbId)
                 .callAsync(this) { tgFile -> downloadFile(tgFile, localFile) }
     }

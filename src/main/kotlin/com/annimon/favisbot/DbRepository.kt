@@ -4,8 +4,8 @@ import com.dieselpoint.norm.Database
 
 class DbRepository(private val db: Database) {
 
-    fun isItemExists(id: String): Boolean {
-        return db.sql("SELECT COUNT(*) FROM items WHERE id = ?", id)
+    fun isItemExists(uniqueId: String): Boolean {
+        return db.sql("SELECT COUNT(*) FROM items WHERE uniqueId = ?", uniqueId)
             .first(Int::class.java) != 0
     }
 
@@ -54,7 +54,7 @@ class DbRepository(private val db: Database) {
         var query = q.replace("[;:\"'`]".toRegex(), "")
 
         val columns = "`id`, `type`, `animated`"
-        val tablesSql = "FROM items INNER JOIN savedItems si ON si.itemId = items.id AND si.userId = ?"
+        val tablesSql = "FROM items INNER JOIN savedItems si ON si.itemId = items.uniqueId AND si.userId = ?"
         val limitSql = "LIMIT $limit OFFSET $offset"
         return when {
             query.isBlank() || query == ".all" -> {
@@ -100,7 +100,7 @@ class DbRepository(private val db: Database) {
             db.sql("""
                 SELECT items.*, GROUP_CONCAT(savedItems.tag, ", ") as tag FROM items
                 LEFT JOIN savedItems
-                  ON savedItems.itemId = items.id AND savedItems.userId = ?
+                  ON savedItems.itemId = items.uniqueId AND savedItems.userId = ?
                 GROUP BY id
                 HAVING stickerSet = ?
                 """.trimIndent(), userId, set)
@@ -110,9 +110,9 @@ class DbRepository(private val db: Database) {
             db.sql("""
                 SELECT items.*, GROUP_CONCAT(savedItems.tag, ", ") as tag FROM items
                 INNER JOIN userSets
-                  ON items.id = userSets.setName AND userSets.userId = ?
+                  ON items.uniqueId = userSets.setName AND userSets.userId = ?
                 LEFT JOIN savedItems
-                  ON savedItems.itemId = items.id AND savedItems.userId = ?
+                  ON savedItems.itemId = items.uniqueId AND savedItems.userId = ?
                 GROUP BY id
                 HAVING `type` = ?
                 """.trimIndent(), userId, userId, type)
@@ -157,6 +157,7 @@ class DbRepository(private val db: Database) {
             CREATE TABLE IF NOT EXISTS items (
               `id`          TEXT PRIMARY KEY,
               `type`        TEXT NOT NULL,
+              `uniqueId`    TEXT NOT NULL UNIQUE,
               `stickerSet`  TEXT,
               `animated`    INTEGER NOT NULL
             )""".trimIndent()).execute()
@@ -196,6 +197,10 @@ class DbRepository(private val db: Database) {
         db.sql("""
             CREATE INDEX IF NOT EXISTS "idx_userSet" ON "userSets" (
                 "setName"
+            );""".trimIndent()).execute()
+        db.sql("""
+            CREATE UNIQUE INDEX IF NOT EXISTS "idx_userSets" ON "userSets" (
+                "setName", "userId"
             );""".trimIndent()).execute()
     }
 }
