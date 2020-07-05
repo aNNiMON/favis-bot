@@ -8,6 +8,7 @@ import com.annimon.tgbotsmodule.BotHandler
 import com.annimon.tgbotsmodule.api.methods.Methods
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.telegram.telegrambots.meta.api.methods.ActionType
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.PhotoSize
@@ -312,7 +313,10 @@ class FavisBotHandler(
         if (!repository.isUserSetExists(setName, message.from.id)) {
             repository.addUserSet(DbUserSet(setName, message.from.id, Instant.now().epochSecond))
         }
-        downloadThumbs(stickerSet)
+        downloadThumbs(stickerSet) {
+            Methods.sendChatAction(message.from.id.toLong(), ActionType.TYPING)
+                    .call(this)
+        }
         val newItemsCount = stickerSet.stickers
                 .filterNot { repository.isItemExists(it.fileUniqueId) }
                 .map { DbItem(
@@ -325,14 +329,18 @@ class FavisBotHandler(
                 .onEach { repository.addItem(it) }
                 .count()
         log.info("processSticker: $setName added $newItemsCount of ${stickerSet.stickers.size}")
-        val msg = "Sticker set added"
+        val msg = """Sticker set "${stickerSet.title}" added"""
         Methods.sendMessage(message.from.id.toLong(), msg).call(this)
     }
 
-    private fun downloadThumbs(stickerSet: StickerSet) {
+    private fun downloadThumbs(stickerSet: StickerSet, callback: () -> Unit) {
         val parent = File("public/thumbs/${stickerSet.name}")
         parent.mkdirs()
-        for (sticker in stickerSet.stickers) {
+        stickerSet.stickers.forEachIndexed { index, sticker ->
+            // Every 60th sticker send chat action
+            if (index.rem(60) == 0) {
+                callback()
+            }
             val localFile = File(parent, "${sticker.fileUniqueId}.png")
             Methods.getFile(sticker.thumb.fileId)
                     .callAsync(this) { tgFile -> downloadFile(tgFile, localFile) }
