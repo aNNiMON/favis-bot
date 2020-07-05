@@ -333,7 +333,7 @@ class FavisBotHandler(
         val parent = File("public/thumbs/${stickerSet.name}")
         parent.mkdirs()
         for (sticker in stickerSet.stickers) {
-            val localFile = File(parent, "${sticker.fileId}.png")
+            val localFile = File(parent, "${sticker.fileUniqueId}.png")
             Methods.getFile(sticker.thumb.fileId)
                     .callAsync(this) { tgFile -> downloadFile(tgFile, localFile) }
         }
