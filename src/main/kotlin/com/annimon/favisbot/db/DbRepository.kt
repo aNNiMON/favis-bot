@@ -1,8 +1,9 @@
 package com.annimon.favisbot.db
 
 import com.dieselpoint.norm.Database
+import com.google.inject.Inject
 
-class DbRepository(private val db: Database) {
+class DbRepository @Inject constructor(private val db: Database) {
 
     fun isItemExists(uniqueId: String): Boolean {
         return db.sql("SELECT COUNT(*) FROM items WHERE uniqueId = ?", uniqueId)
@@ -148,59 +149,5 @@ class DbRepository(private val db: Database) {
 
     fun addUserSet(userSet: DbUserSet) {
         db.insert(userSet)
-    }
-
-    // Other
-
-    fun createTablesIfNotExists() {
-        db.sql("""
-            CREATE TABLE IF NOT EXISTS items (
-              `id`          TEXT PRIMARY KEY,
-              `type`        TEXT NOT NULL,
-              `uniqueId`    TEXT NOT NULL UNIQUE,
-              `stickerSet`  TEXT,
-              `animated`    INTEGER NOT NULL
-            )""".trimIndent()).execute()
-        db.sql("""
-            CREATE TABLE IF NOT EXISTS users (
-              `id`          INTEGER PRIMARY KEY,
-              `firstName`   TEXT NOT NULL,
-              `guid`        TEXT NOT NULL,
-              `allowed`     INTEGER NOT NULL,
-              `updatedAt`   INTEGER NOT NULL
-            )""".trimIndent()).execute()
-        db.sql("""
-            CREATE TABLE IF NOT EXISTS userTags (
-              `itemId`      TEXT NOT NULL,
-              `userId`      INTEGER NOT NULL,
-              `tag`         TEXT NOT NULL
-            )""".trimIndent()).execute()
-        db.sql("""
-            CREATE TABLE IF NOT EXISTS userSets (
-              `setName`     TEXT NOT NULL,
-              `userId`      INTEGER NOT NULL,
-              `updatedAt`   INTEGER NOT NULL
-            )""".trimIndent()).execute()
-        // Index
-        db.sql("""
-            CREATE INDEX IF NOT EXISTS "idx_sticker" ON "items" (
-                "stickerSet" ASC
-            );""".trimIndent()).execute()
-        db.sql("""
-            CREATE UNIQUE INDEX IF NOT EXISTS "idx_guid" ON "users" (
-                "guid"
-            );""".trimIndent()).execute()
-        db.sql("""
-            CREATE INDEX IF NOT EXISTS "idx_userTag" ON "userTags" (
-                "itemId", "userId"
-            );""".trimIndent()).execute()
-        db.sql("""
-            CREATE INDEX IF NOT EXISTS "idx_userSet" ON "userSets" (
-                "setName"
-            );""".trimIndent()).execute()
-        db.sql("""
-            CREATE UNIQUE INDEX IF NOT EXISTS "idx_userSets" ON "userSets" (
-                "setName", "userId"
-            );""".trimIndent()).execute()
     }
 }

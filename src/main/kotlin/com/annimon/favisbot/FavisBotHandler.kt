@@ -10,6 +10,7 @@ import com.annimon.favisbot.db.DbUser.Companion.ALLOWANCE_UNKNOWN
 import com.annimon.favisbot.db.DbUserSet
 import com.annimon.tgbotsmodule.BotHandler
 import com.annimon.tgbotsmodule.api.methods.Methods
+import com.google.inject.Injector
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.telegram.telegrambots.meta.api.methods.ActionType
@@ -28,10 +29,9 @@ import java.io.File
 import java.time.Instant
 import java.util.*
 
-class FavisBotHandler(
-    private val appConfig: AppConfig,
-    private val repository: DbRepository
-) : BotHandler() {
+class FavisBotHandler(injector: Injector) : BotHandler() {
+    private val appConfig = injector.getInstance(AppConfig::class.java)
+    private val repository = injector.getInstance(DbRepository::class.java)
 
     companion object {
         private val log: Logger = LoggerFactory.getLogger(FavisBotHandler::class.java)

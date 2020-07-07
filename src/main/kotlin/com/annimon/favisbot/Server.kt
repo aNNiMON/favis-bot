@@ -3,6 +3,7 @@ package com.annimon.favisbot
 import com.annimon.favisbot.db.DbRepository
 import com.annimon.favisbot.db.DbUserTag
 import com.annimon.favisbot.db.DbUser
+import com.google.inject.Injector
 import io.javalin.Javalin
 import io.javalin.apibuilder.ApiBuilder.*
 import io.javalin.http.Context
@@ -12,8 +13,9 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.math.min
 
-class Server(private val appConfig: AppConfig,
-             private val repository: DbRepository) {
+class Server(injector: Injector) {
+    private val appConfig = injector.getInstance(AppConfig::class.java)
+    private val repository: DbRepository = injector.getInstance(DbRepository::class.java)
 
     companion object {
         private val log: Logger = LoggerFactory.getLogger(Server::class.java)
