@@ -1,5 +1,6 @@
 package com.annimon.favisbot
 
+import com.annimon.favisbot.db.DbRepository
 import com.annimon.tgbotsmodule.BotModule
 import com.annimon.tgbotsmodule.Runner
 import com.annimon.tgbotsmodule.services.YamlConfigLoaderService

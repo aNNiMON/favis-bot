@@ -1,5 +1,8 @@
 package com.annimon.favisbot
 
+import com.annimon.favisbot.db.DbRepository
+import com.annimon.favisbot.db.DbUserTag
+import com.annimon.favisbot.db.DbUser
 import io.javalin.Javalin
 import io.javalin.apibuilder.ApiBuilder.*
 import io.javalin.http.Context
@@ -28,7 +31,7 @@ class Server(private val appConfig: AppConfig,
             get("/meta/:guid", ::getMeta)
             before(::authUserByGUID)
             get("/items/:set", ::getItemsInSet)
-            post("/items", ::updateSavedItem)
+            post("/items", ::updateUserTag)
         }
     }
 
@@ -82,16 +85,16 @@ class Server(private val appConfig: AppConfig,
     /**
      * Update or remove item
      */
-    private fun updateSavedItem(ctx: @NotNull Context) {
+    private fun updateUserTag(ctx: @NotNull Context) {
         val body = ctx.body<BodyItem>()
         val user: DbUser = ctx.attribute("user")!!
-        val savedItem = DbSavedItem(body.uniqueId, user.id, body.tags)
+        val savedItem = DbUserTag(body.uniqueId, user.id, body.tags)
         if (body.tags.isBlank()) {
-            val removed = repository.removeSavedItemIfExists(savedItem)
+            val removed = repository.removeUserTagIfExists(savedItem)
             ctx.status(if (removed) 205 else 204)
         } else {
             body.tags = body.tags.substring(0, min(body.tags.length, 255))
-            val created = repository.upsertSavedItem(savedItem)
+            val created = repository.replaceUserTags(savedItem)
             ctx.status(if (created) 201 else 200)
         }
     }

@@ -1,9 +1,13 @@
 package com.annimon.favisbot
 
-import com.annimon.favisbot.DbUser.Companion.ALLOWANCE_ALLOWED
-import com.annimon.favisbot.DbUser.Companion.ALLOWANCE_IGNORED
-import com.annimon.favisbot.DbUser.Companion.ALLOWANCE_PENDING
-import com.annimon.favisbot.DbUser.Companion.ALLOWANCE_UNKNOWN
+import com.annimon.favisbot.db.DbItem
+import com.annimon.favisbot.db.DbRepository
+import com.annimon.favisbot.db.DbUser
+import com.annimon.favisbot.db.DbUser.Companion.ALLOWANCE_ALLOWED
+import com.annimon.favisbot.db.DbUser.Companion.ALLOWANCE_IGNORED
+import com.annimon.favisbot.db.DbUser.Companion.ALLOWANCE_PENDING
+import com.annimon.favisbot.db.DbUser.Companion.ALLOWANCE_UNKNOWN
+import com.annimon.favisbot.db.DbUserSet
 import com.annimon.tgbotsmodule.BotHandler
 import com.annimon.tgbotsmodule.api.methods.Methods
 import org.slf4j.Logger
@@ -202,7 +206,7 @@ class FavisBotHandler(
                 repository.upsertUser(DbUser(
                         id = message.from.id,
                         firstName = message.from.firstName,
-                        guid =  message.from.id.toString(),
+                        guid = message.from.id.toString(),
                         allowed = ALLOWANCE_PENDING,
                         updatedAt = Instant.now().epochSecond
                 ))
@@ -357,13 +361,15 @@ class FavisBotHandler(
         }
         val newItemsCount = stickerSet.stickers
                 .filterNot { repository.isItemExists(it.fileUniqueId) }
-                .map { DbItem(
-                        id = it.fileId,
-                        type = "sticker",
-                        uniqueId = it.fileUniqueId,
-                        stickerSet = stickerSet.name,
-                        animated = if (it.animated) 1 else 0
-                ) }
+                .map {
+                    DbItem(
+                            id = it.fileId,
+                            type = "sticker",
+                            uniqueId = it.fileUniqueId,
+                            stickerSet = stickerSet.name,
+                            animated = if (it.animated) 1 else 0
+                    )
+                }
                 .onEach { repository.addItem(it) }
                 .count()
         log.info("processSticker: $setName added $newItemsCount of ${stickerSet.stickers.size}")

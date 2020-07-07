@@ -1,4 +1,4 @@
-package com.annimon.favisbot
+package com.annimon.favisbot.db
 
 import com.dieselpoint.norm.Database
 
@@ -13,19 +13,19 @@ class DbRepository(private val db: Database) {
         db.insert(item)
     }
 
-    // Saved Items
+    // User tags
 
-    fun isSavedItemExists(item: DbSavedItem) = db.sql(
-            "SELECT COUNT(*) FROM savedItems WHERE itemId = ? AND userId = ?",
+    fun isItemTagged(item: DbUserTag) = db.sql(
+            "SELECT COUNT(*) FROM userTags WHERE itemId = ? AND userId = ?",
             item.itemId, item.userId)
             .first(Int::class.java) != 0
 
     /**
      * @return true - element was exists, false - otherwise
      */
-    fun removeSavedItemIfExists(item: DbSavedItem): Boolean {
-        if (isSavedItemExists(item)) {
-            db.table("savedItems")
+    fun removeUserTagIfExists(item: DbUserTag): Boolean {
+        if (isItemTagged(item)) {
+            db.table("userTags")
                     .where("itemId = ? AND userId = ?", item.itemId, item.userId)
                     .delete()
             return true
@@ -36,13 +36,13 @@ class DbRepository(private val db: Database) {
     /**
      * @return true - new element, false - update old
      */
-    fun upsertSavedItem(item: DbSavedItem): Boolean {
-        val wasExists = removeSavedItemIfExists(item)
+    fun replaceUserTags(item: DbUserTag): Boolean {
+        val wasExists = removeUserTagIfExists(item)
         item.tag.split(",")
                 .map { it.trim() }
                 .distinctBy { it.toLowerCase() }
                 .forEach { tag ->
-                    db.sql("INSERT INTO savedItems(itemId, userId, tag) VALUES (?, ?, ?)",
+                    db.sql("INSERT INTO userTags(itemId, userId, tag) VALUES (?, ?, ?)",
                             item.itemId, item.userId, tag)
                             .execute()
                 }
@@ -54,7 +54,7 @@ class DbRepository(private val db: Database) {
         var query = q.replace("[;:\"'`]".toRegex(), "")
 
         val columns = "`id`, `type`, `animated`"
-        val tablesSql = "FROM items INNER JOIN savedItems si ON si.itemId = items.uniqueId AND si.userId = ?"
+        val tablesSql = "FROM items INNER JOIN userTags si ON si.itemId = items.uniqueId AND si.userId = ?"
         val limitSql = "LIMIT $limit OFFSET $offset"
         return when {
             query.isBlank() || query == ".all" -> {
@@ -98,9 +98,9 @@ class DbRepository(private val db: Database) {
 
     fun findAllByStickerSet(userId: Int, set: String): List<DbItemWithTag> =
             db.sql("""
-                SELECT items.*, GROUP_CONCAT(savedItems.tag, ", ") as tag FROM items
-                LEFT JOIN savedItems
-                  ON savedItems.itemId = items.uniqueId AND savedItems.userId = ?
+                SELECT items.*, GROUP_CONCAT(userTags.tag, ", ") as tag FROM items
+                LEFT JOIN userTags
+                  ON userTags.itemId = items.uniqueId AND userTags.userId = ?
                 GROUP BY id
                 HAVING stickerSet = ?
                 """.trimIndent(), userId, set)
@@ -108,11 +108,11 @@ class DbRepository(private val db: Database) {
 
     fun findAllByType(userId: Int, type: String): List<DbItemWithTag> =
             db.sql("""
-                SELECT items.*, GROUP_CONCAT(savedItems.tag, ", ") as tag FROM items
+                SELECT items.*, GROUP_CONCAT(userTags.tag, ", ") as tag FROM items
                 INNER JOIN userSets
                   ON items.uniqueId = userSets.setName AND userSets.userId = ?
-                LEFT JOIN savedItems
-                  ON savedItems.itemId = items.uniqueId AND savedItems.userId = ?
+                LEFT JOIN userTags
+                  ON userTags.itemId = items.uniqueId AND userTags.userId = ?
                 GROUP BY id
                 HAVING `type` = ?
                 """.trimIndent(), userId, userId, type)
@@ -170,7 +170,7 @@ class DbRepository(private val db: Database) {
               `updatedAt`   INTEGER NOT NULL
             )""".trimIndent()).execute()
         db.sql("""
-            CREATE TABLE IF NOT EXISTS savedItems (
+            CREATE TABLE IF NOT EXISTS userTags (
               `itemId`      TEXT NOT NULL,
               `userId`      INTEGER NOT NULL,
               `tag`         TEXT NOT NULL
@@ -191,7 +191,7 @@ class DbRepository(private val db: Database) {
                 "guid"
             );""".trimIndent()).execute()
         db.sql("""
-            CREATE INDEX IF NOT EXISTS "idx_userItem" ON "savedItems" (
+            CREATE INDEX IF NOT EXISTS "idx_userTag" ON "userTags" (
                 "itemId", "userId"
             );""".trimIndent()).execute()
         db.sql("""

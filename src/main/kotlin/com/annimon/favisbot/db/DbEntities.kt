@@ -1,4 +1,4 @@
-package com.annimon.favisbot
+package com.annimon.favisbot.db
 
 import javax.persistence.Id
 import javax.persistence.Table
@@ -45,8 +45,8 @@ data class DbUser(
     }
 }
 
-@Table(name = "savedItems")
-data class DbSavedItem(
+@Table(name = "userTags")
+data class DbUserTag(
     var itemId: String,
     var userId: Int,
     var tag: String
