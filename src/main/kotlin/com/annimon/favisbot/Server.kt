@@ -1,9 +1,7 @@
 package com.annimon.favisbot
 
-import com.annimon.favisbot.db.DbRepository
-import com.annimon.favisbot.db.DbUserTag
-import com.annimon.favisbot.db.DbUser
-import com.google.inject.Injector
+import com.annimon.favisbot.db.*
+import com.google.inject.Inject
 import io.javalin.Javalin
 import io.javalin.apibuilder.ApiBuilder.*
 import io.javalin.http.Context
@@ -13,9 +11,12 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.math.min
 
-class Server(injector: Injector) {
-    private val appConfig = injector.getInstance(AppConfig::class.java)
-    private val repository: DbRepository = injector.getInstance(DbRepository::class.java)
+class Server @Inject constructor(
+        private val appConfig: AppConfig,
+        private val itemsRepository: ItemsRepository,
+        private val userSetsRepository: UserSetsRepository,
+        private val usersRepository: UsersRepository
+) {
 
     companion object {
         private val log: Logger = LoggerFactory.getLogger(Server::class.java)
@@ -41,9 +42,9 @@ class Server(injector: Injector) {
      * Returns meta info: app and bot names, user info, set names
      */
     private fun getMeta(ctx: @NotNull Context) {
-        val user = repository.findUserByGUID(ctx.pathParam("guid"))
+        val user = usersRepository.findUserByGUID(ctx.pathParam("guid"))
         val sets = if (user == null) emptyList()
-                   else repository.findAllUserSets(user.id)
+                   else userSetsRepository.findAllUserSets(user.id)
         ctx.json(hashMapOf(
                 "appName" to (appConfig.appName ?: appConfig.botUsername),
                 "bot" to appConfig.botUsername,
@@ -63,7 +64,7 @@ class Server(injector: Injector) {
             ctx.status(401)
             return
         }
-        val user = repository.findUserByGUID(guid)
+        val user = usersRepository.findUserByGUID(guid)
         if (user == null) {
             ctx.status(401)
             return
@@ -78,9 +79,9 @@ class Server(injector: Injector) {
         val setName = ctx.pathParam("set")
         val user: DbUser = ctx.attribute("user")!!
         if (setName.startsWith("!")) {
-            ctx.json(repository.findAllByType(user.id, setName.trimStart('!')))
+            ctx.json(userSetsRepository.findAllByType(user.id, setName.trimStart('!')))
         } else {
-            ctx.json(repository.findAllByStickerSet(user.id, setName))
+            ctx.json(userSetsRepository.findAllByStickerSet(user.id, setName))
         }
     }
 
@@ -92,11 +93,11 @@ class Server(injector: Injector) {
         val user: DbUser = ctx.attribute("user")!!
         val savedItem = DbUserTag(body.uniqueId, user.id, body.tags)
         if (body.tags.isBlank()) {
-            val removed = repository.removeUserTagIfExists(savedItem)
+            val removed = itemsRepository.removeUserTagIfExists(savedItem)
             ctx.status(if (removed) 205 else 204)
         } else {
             body.tags = body.tags.substring(0, min(body.tags.length, 255))
-            val created = repository.replaceUserTags(savedItem)
+            val created = itemsRepository.replaceUserTags(savedItem)
             ctx.status(if (created) 201 else 200)
         }
     }
