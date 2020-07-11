@@ -61,11 +61,19 @@ class ItemsRepository @Inject constructor(private val db: Database) {
                 val items = db.sql("""
                     SELECT `id`, `type`, `animated` FROM items 
                     INNER JOIN userTags t ON t.itemId = items.uniqueId AND t.userId = ?
+                    LEFT JOIN userSets s ON s.setName = 
+                        (CASE WHEN items.type = "sticker"
+                              THEN items.stickerSet
+                              ELSE items.uniqueId
+                         END)
+                        AND s.userId = ?
                     GROUP BY id
+                    ORDER BY updatedAt DESC
                     LIMIT $limit OFFSET $offset
-                    """.trimIndent(), userId).results(DbItemWithTag::class.java)
+                    """.trimIndent(), userId, userId).results(DbItemWithTag::class.java)
                 Pair(count, items)
             }
+            // TODO multiquery: tag1 +tag2 -tag3
             isExact -> {
                 query = query.trimEnd('.')
                 val count = db.sql("""
