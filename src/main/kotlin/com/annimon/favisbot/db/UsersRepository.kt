@@ -21,4 +21,8 @@ class UsersRepository @Inject constructor(private val db: Database) {
             db.insert(user)
         }
     }
+
+    fun findUsersByAllowance(allowance: Int) =
+            db.where("allowance = ?", allowance)
+                    .results(DbUser::class.java)
 }

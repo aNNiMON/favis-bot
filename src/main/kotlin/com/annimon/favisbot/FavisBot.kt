@@ -1,5 +1,6 @@
 package com.annimon.favisbot
 
+import com.annimon.favisbot.commands.AnnounceCommand
 import com.annimon.favisbot.commands.HelpCommand
 import com.annimon.favisbot.commands.RegisterCommand
 import com.annimon.favisbot.commands.StartCommand
@@ -39,6 +40,7 @@ class FavisBot(private val appName: String) : AbstractModule() {
         // Bot commands
         bind(StartCommand::class.java).`in`(Singleton::class.java)
         bind(RegisterCommand::class.java).`in`(Singleton::class.java)
+        bind(AnnounceCommand::class.java).`in`(Singleton::class.java)
         bind(HelpCommand::class.java).`in`(Singleton::class.java)
     }
 

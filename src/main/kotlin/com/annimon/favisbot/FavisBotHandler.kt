@@ -27,6 +27,7 @@ class FavisBotHandler(injector: Injector) : BotHandler() {
     private val usersRepository = injector.getInstance(UsersRepository::class.java)
     private val commandStart = injector.getInstance(StartCommand::class.java)
     private val commandRegister = injector.getInstance(RegisterCommand::class.java)
+    private val commandAnnounce = injector.getInstance(AnnounceCommand::class.java)
     private val commandHelp = injector.getInstance(HelpCommand::class.java)
     private val onStickerCommand = injector.getInstance(OnStickerCommand::class.java)
     private val onMediaCommand = injector.getInstance(OnMediaCommand::class.java)
@@ -55,6 +56,7 @@ class FavisBotHandler(injector: Injector) : BotHandler() {
             when (command.toLowerCase()) {
                 "/start" -> commandStart.run(message, this)
                 "/register" -> commandRegister.run(message, this)
+                "/announce" -> commandAnnounce.run(message, this)
                 "/help" -> commandHelp.run(message, this)
                 else -> log.info("Unknown command: $command")
             }
