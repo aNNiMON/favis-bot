@@ -35,6 +35,7 @@ class UserSetsRepository @Inject constructor(private val db: Database) {
                   ON userTags.itemId = items.uniqueId AND userTags.userId = ?
                 GROUP BY id
                 HAVING `type` = ?
+                ORDER BY updatedAt DESC
                 """.trimIndent(), userId, userId, type)
                 .results(DbItemWithTag::class.java)
 
