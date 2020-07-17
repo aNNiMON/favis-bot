@@ -7,6 +7,7 @@ import com.annimon.tgbotsmodule.api.methods.Methods
 import com.annimon.tgbotsmodule.services.CommonAbsSender
 import com.google.inject.Inject
 import org.telegram.telegrambots.meta.api.objects.Message
+import kotlin.concurrent.thread
 
 class AnnounceCommand @Inject constructor(
         private val appConfig: AppConfig,
@@ -25,7 +26,7 @@ class AnnounceCommand @Inject constructor(
         val msg = message.replyToMessage.text
         val users = usersRepository.findUsersByAllowance(ALLOWANCE_ALLOWED)
                 .filter { user -> user.id != appConfig.adminId }
-        Thread {
+        thread {
             val sentCount = users.mapIndexed { index, user ->
                 if (index.rem(10) == 0) {
                     Thread.sleep(1000)
@@ -37,6 +38,6 @@ class AnnounceCommand @Inject constructor(
             }.sum()
             Methods.sendMessage(appConfig.adminId.toLong(), "Message sent to $sentCount users")
                     .callAsync(sender)
-        }.start()
+        }
     }
 }

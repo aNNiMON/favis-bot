@@ -23,6 +23,6 @@ class UsersRepository @Inject constructor(private val db: Database) {
     }
 
     fun findUsersByAllowance(allowance: Int) =
-            db.where("allowance = ?", allowance)
+            db.where("allowed = ?", allowance)
                     .results(DbUser::class.java)
 }
