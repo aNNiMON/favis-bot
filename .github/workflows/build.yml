@@ -15,4 +15,4 @@ jobs:
       with:
         java-version: 11
     - name: "Test"
-      run: ./gradlew test
+      run: chmod +x gradlew && ./gradlew test
