@@ -58,18 +58,16 @@ class RegisterCommand @Inject constructor(
                 val msg = "User <a href=\"tg://user?id=${fromId}\">" +
                         safeHtml(message.from.firstName) + "</a>" +
                         " requested access to the bot."
-                val markup = InlineKeyboardMarkup()
-                markup.keyboard = listOf(listOf(
-                        InlineKeyboardButton()
-                                .setText("Allow")
-                                .setCallbackData("a:$fromId"),
-                        InlineKeyboardButton()
-                                .setText("Ignore")
-                                .setCallbackData("i:$fromId")
-                ))
                 Methods.sendMessage(appConfig.adminId.toLong(), msg)
                         .enableHtml()
-                        .setReplyMarkup(markup)
+                        .setReplyMarkup(keyboardRow(
+                                InlineKeyboardButton()
+                                        .setText("Allow")
+                                        .setCallbackData("a:$fromId"),
+                                InlineKeyboardButton()
+                                        .setText("Ignore")
+                                        .setCallbackData("i:$fromId")
+                        ))
                         .callAsync(sender)
             }
             ALLOWANCE_ALLOWED -> {
@@ -85,12 +83,22 @@ class RegisterCommand @Inject constructor(
                 val host = appConfig.host ?: "http://127.0.0.1"
                 val port = appConfig.port ?: 9377
                 Methods.sendMessage(message.from.id.toLong(),
-                        "Here's your link to the web page:\n" +
-                                " 🌐 $host:$port/?d=$guid\n" +
-                                "You can generate a new link by sending /register again.")
+                        "Here's your link to the web page.\n" +
+                        "You can generate a new link by sending /register again.")
+                        .setReplyMarkup(keyboardRow(
+                                InlineKeyboardButton()
+                                        .setText("Profile page")
+                                        .setUrl("$host:$port/?d=$guid")
+                        ))
                         .callAsync(sender)
             }
         }
+    }
+
+    private fun keyboardRow(vararg buttons: InlineKeyboardButton) : InlineKeyboardMarkup {
+        val markup = InlineKeyboardMarkup()
+        markup.keyboard = listOf(listOf(*buttons))
+        return markup
     }
 
     private fun getAllowance(user: DbUser?): Int {
