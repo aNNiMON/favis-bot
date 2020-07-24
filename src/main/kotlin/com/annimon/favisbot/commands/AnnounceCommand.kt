@@ -25,7 +25,6 @@ class AnnounceCommand @Inject constructor(
 
         val msg = message.replyToMessage.text
         val users = usersRepository.findUsersByAllowance(ALLOWANCE_ALLOWED)
-                .filter { user -> user.id != appConfig.adminId }
         thread {
             val sentCount = users.mapIndexed { index, user ->
                 if (index.rem(10) == 0) {
