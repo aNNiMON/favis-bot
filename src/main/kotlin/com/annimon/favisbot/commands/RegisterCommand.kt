@@ -28,8 +28,13 @@ class RegisterCommand @Inject constructor(
     }
 
     override fun run(message: Message, sender: CommonAbsSender) {
-        val user = usersRepository.findUserById(message.from.id)
-        when (getAllowance(user)) {
+        val allowance = if (appConfig.adminId == message.from.id) {
+            ALLOWANCE_ALLOWED
+        } else {
+            val user = usersRepository.findUserById(message.from.id)
+            getAllowance(user)
+        }
+        when (allowance) {
             ALLOWANCE_IGNORED -> return
             ALLOWANCE_PENDING -> return
             ALLOWANCE_UNKNOWN -> {
