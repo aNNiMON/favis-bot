@@ -43,7 +43,8 @@ class HelpCommand @Inject constructor(
             
             Type `$bot` in any chat to access your tagged collection.
             Type `$bot term` to show items containing the substring "term" tag.
-            For exact match only, use `.` at the end of your query:  `$bot term.`
+            For exact match only, use `.` at the end of your term:  `$bot term.
+            You can specify more terms by separating them with comma:  `$bot term1, term2., term3`
             To show all your tagged collection you can use `.all` query.
             """.trimIndent()
         Methods.sendMessage()

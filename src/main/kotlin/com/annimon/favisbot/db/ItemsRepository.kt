@@ -49,16 +49,16 @@ class ItemsRepository @Inject constructor(private val db: Database) {
     }
 
     fun searchItems(q: String, userId: Int, limit: Int, offset: Int): Pair<Int, List<DbItemWithTag>> {
-        val isExact = q.endsWith(".")
         var query = q.replace("[;:\"'`]".toRegex(), "")
+        val tags = query.split(",\\s*".toRegex()).filterNot(String::isBlank)
 
-        return when {
-            query.isBlank() || query == ".all" -> {
-                val count = db.sql("""
+        // Show all items
+        if (query.isBlank() || query == ".all" || tags.isEmpty()) {
+            val count = db.sql("""
                     SELECT COUNT(DISTINCT id) FROM items
                     INNER JOIN userTags t ON t.itemId = items.uniqueId AND t.userId = ?
                     """.trimIndent(), userId).first(Int::class.java)
-                val items = db.sql("""
+            val items = db.sql("""
                     SELECT `id`, `type`, `animated` FROM items 
                     INNER JOIN userTags t ON t.itemId = items.uniqueId AND t.userId = ?
                     LEFT JOIN userSets s ON s.setName = 
@@ -71,41 +71,35 @@ class ItemsRepository @Inject constructor(private val db: Database) {
                     ORDER BY updatedAt DESC
                     LIMIT $limit OFFSET $offset
                     """.trimIndent(), userId, userId).results(DbItemWithTag::class.java)
-                Pair(count, items)
-            }
-            // TODO multiquery: tag1 +tag2 -tag3
-            isExact -> {
-                query = query.trimEnd('.')
-                val count = db.sql("""
-                    SELECT COUNT(DISTINCT id) FROM items
-                    INNER JOIN userTags t ON t.itemId = items.uniqueId AND t.userId = ?
-                    WHERE tag = ?
-                    """.trimIndent(), userId, query).first(Int::class.java)
-                val items = db.sql("""
-                    SELECT `id`, `type`, `animated` FROM items
-                    INNER JOIN userTags t ON t.itemId = items.uniqueId AND t.userId = ?
-                    WHERE tag = ?
-                    LIMIT $limit OFFSET $offset
-                    """.trimIndent(), userId, query).results(DbItemWithTag::class.java)
-                Pair(count, items)
-            }
-            else -> {
-                query = "%" + query.replace("%", "\\%") + "%"
-                val count = db.sql("""
-                    SELECT COUNT(*) FROM (
-                        SELECT DISTINCT id FROM items
-                        INNER JOIN userTags t ON t.itemId = items.uniqueId AND t.userId = ?
-                        WHERE tag LIKE ? GROUP BY id
-                    ) AS tbl
-                    """.trimIndent(), userId, query).first(Int::class.java)
-                val items = db.sql("""
-                        SELECT `id`, `type`, `animated` FROM items
-                        INNER JOIN userTags t ON t.itemId = items.uniqueId AND t.userId = ?
-                        WHERE tag LIKE ? GROUP BY id
-                        LIMIT $limit OFFSET $offset
-                        """.trimIndent(), userId, query).results(DbItemWithTag::class.java)
-                Pair(count, items)
+            return Pair(count, items)
+        }
+
+        // Search by tags
+        val conditions = ArrayList<String>()
+        val args = ArrayList<String>()
+        for (tag in tags) {
+            var tagArg = tag.trim()
+            val isExact = tagArg.endsWith(".")
+            tagArg = tagArg.trimEnd('.')
+            if (isExact) {
+                conditions.add("tag = ?")
+                args.add(tagArg)
+            } else {
+                conditions.add("tag LIKE ?")
+                args.add("%" + tagArg.replace("%", "\\%") + "%")
             }
         }
+        val sqlQuery = """
+                SELECT `id`, `type`, `animated`, COUNT(*) AS cnt FROM items
+                INNER JOIN userTags t ON t.itemId = items.uniqueId AND t.userId = ?
+                WHERE ${conditions.joinToString(" OR ")}
+                GROUP BY id
+                HAVING cnt = ${tags.count()}
+                """.trimIndent()
+        val count = db.sql("SELECT COUNT(*) FROM ($sqlQuery) AS tbl",
+                userId, *args.toArray()).first(Int::class.java)
+        val items = db.sql("$sqlQuery LIMIT $limit OFFSET $offset",
+                userId, *args.toArray()).results(DbItemWithTag::class.java)
+        return Pair(count, items)
     }
 }
