@@ -22,8 +22,10 @@ class Server @Inject constructor(
         private val log: Logger = LoggerFactory.getLogger(Server::class.java)
     }
 
+    private lateinit var app: Javalin
+
     fun start() {
-        val app = Javalin.create {
+        app = Javalin.create {
             it.addStaticFiles("/", "public", Location.EXTERNAL)
         }.apply {
             exception(Exception::class.java) { e, ctx -> log.error("javalin", e) }
@@ -37,6 +39,8 @@ class Server @Inject constructor(
             post("/items", ::updateUserTag)
         }
     }
+
+    fun stop() = app.stop()
 
     /**
      * Returns meta info: app and bot names, user info, set names
