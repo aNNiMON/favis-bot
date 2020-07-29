@@ -31,7 +31,7 @@ class TestModule : AbstractModule() {
 
     @Provides
     @Singleton
-    fun getDatabase() = database
+    fun getDatabase() = database // TODO in memory
 
     @Provides
     @Singleton
