@@ -1,11 +1,10 @@
 package com.annimon.favisbot
 
-import com.annimon.favisbot.db.DbItemWithTag
-import com.annimon.favisbot.db.DbUser
-import com.annimon.favisbot.db.UserSetsRepository
-import com.annimon.favisbot.db.UsersRepository
+import com.annimon.favisbot.db.*
 import com.google.inject.Guice
 import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkAll
 import kong.unirest.Unirest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -21,7 +20,6 @@ class ServerTest {
     @Test
     fun `GET meta default appName and user`() {
         val guid = "abc1230f-abcd"
-        every { usersRepository.findUserByGUID(guid) } returns null
         server.start()
         val response = Unirest.get("$baseUrl/meta/$guid").asObject(HashMap::class.java)
 
@@ -34,10 +32,8 @@ class ServerTest {
     @Test
     fun `GET meta valid user`() {
         val guid = "abc1230f-abcd"
-        val user = DbUser().apply {
-            firstName = "name"
-            this.guid = guid
-        }
+        val user = createDefaultUser(guid)
+        mockkObject(usersRepository)
         every { usersRepository.findUserByGUID(guid) } returns user
         server.start()
         val response = Unirest.get("$baseUrl/meta/$guid").asObject(HashMap::class.java)
@@ -48,6 +44,25 @@ class ServerTest {
         assertThat(response.body["stickerSets"] as List<*>)
             .contains("!animation", "!document", "!gif", "!photo", "!video")
         server.stop()
+        unmockkAll()
+    }
+
+    @Test
+    fun `GET meta valid user with sticker sets`() {
+        val guid = "abc1230f-abcd"
+        val user = createDefaultUser(guid)
+        mockkObject(usersRepository, userSetsRepository)
+        every { usersRepository.findUserByGUID(guid) } returns user
+        every {
+            userSetsRepository.findAllUserSets(user.id)
+        } returns listOf("set1", "set2")
+        server.start()
+        val response = Unirest.get("$baseUrl/meta/$guid").asObject(HashMap::class.java)
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body["stickerSets"] as List<*>).contains("set1", "set2")
+        server.stop()
+        unmockkAll()
     }
 
     @Test
@@ -61,11 +76,7 @@ class ServerTest {
     @Test
     fun `GET items in set with guid`() {
         val guid = "abc1230f-abcd"
-        val user = DbUser().apply {
-            id = 119
-            firstName = "name"
-            this.guid = guid
-        }
+        val user = createDefaultUser(guid)
         val el1 = DbItemWithTag().apply {
             id = "1"
             stickerSet = "sample-set"
@@ -74,6 +85,7 @@ class ServerTest {
             id = "2"
             stickerSet = "sample-set"
         }
+        mockkObject(usersRepository, userSetsRepository)
         every { usersRepository.findUserByGUID(guid) } returns user
         every {
             userSetsRepository.findAllByStickerSet(119, "sample-set")
@@ -86,5 +98,13 @@ class ServerTest {
         assertThat(response.status).isEqualTo(200)
         assertThat(response.body).contains(el1, el2)
         server.stop()
+        unmockkAll()
     }
+
+    private fun createDefaultUser(guid: String) =
+        DbUser().apply {
+            id = 119
+            firstName = "name"
+            this.guid = guid
+        }
 }
