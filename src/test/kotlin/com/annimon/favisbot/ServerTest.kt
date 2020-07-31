@@ -29,6 +29,7 @@ class ServerTest {
         }
     }
 
+    private val itemsRepository = injector.getInstance(ItemsRepository::class.java)
     private val usersRepository = injector.getInstance(UsersRepository::class.java)
     private val userSetsRepository = injector.getInstance(UserSetsRepository::class.java)
 
@@ -103,6 +104,97 @@ class ServerTest {
 
         assertThat(response.status).isEqualTo(200)
         assertThat(response.body).contains(el1, el2)
+        unmockkAll()
+    }
+
+    @Test
+    fun `POST items add tag`() {
+        val guid = "abc1230f-abcd"
+        val user = createDefaultUser(guid)
+        mockkObject(itemsRepository, usersRepository)
+        every { usersRepository.findUserByGUID(guid) } returns user
+        val response = Unirest.post("$baseUrl/items")
+            .header("guid", guid)
+            .body(Server.BodyItem("1234", "tag1,tag2"))
+            .asEmpty()
+
+        val userTag = DbUserTag("1234", user.id, "tag1,tag2")
+        assertThat(response.status).isEqualTo(201)
+        verify { itemsRepository.replaceUserTags(userTag) }
+        excludeRecords {
+            itemsRepository.isItemTagged(userTag)
+            itemsRepository.removeUserTagIfExists(userTag)
+        }
+        confirmVerified(itemsRepository)
+        unmockkAll()
+    }
+
+    @Test
+    fun `POST items update tag`() {
+        val guid = "abc1230f-abcd"
+        val user = createDefaultUser(guid)
+        mockkObject(itemsRepository, usersRepository)
+        every { usersRepository.findUserByGUID(guid) } returns user
+        every { itemsRepository.isItemTagged(any()) } returns true
+        val response = Unirest.post("$baseUrl/items")
+            .header("guid", guid)
+            .body(Server.BodyItem("1234", "tag1,tag2"))
+            .asEmpty()
+
+        val userTag = DbUserTag("1234", user.id, "tag1,tag2")
+        assertThat(response.status).isEqualTo(200)
+        verify { itemsRepository.replaceUserTags(userTag) }
+        excludeRecords {
+            itemsRepository.isItemTagged(userTag)
+            itemsRepository.removeUserTagIfExists(userTag)
+        }
+        confirmVerified(itemsRepository)
+        unmockkAll()
+    }
+
+    @Test
+    fun `POST items remove tag`() {
+        val guid = "abc1230f-abcd"
+        val user = createDefaultUser(guid)
+        mockkObject(itemsRepository, usersRepository)
+        every { usersRepository.findUserByGUID(guid) } returns user
+        every { itemsRepository.isItemTagged(any()) } returns true
+        val response = Unirest.post("$baseUrl/items")
+            .header("guid", guid)
+            .body(Server.BodyItem("1234", ""))
+            .asEmpty()
+
+        val userTag = DbUserTag("1234", user.id, "")
+        assertThat(response.status).isEqualTo(205)
+        verify(exactly = 0) { itemsRepository.replaceUserTags(userTag) }
+        verify { itemsRepository.removeUserTagIfExists(userTag) }
+        excludeRecords {
+            itemsRepository.isItemTagged(userTag)
+        }
+        confirmVerified(itemsRepository)
+        unmockkAll()
+    }
+
+    @Test
+    fun `POST items remove not existing tag`() {
+        val guid = "abc1230f-abcd"
+        val user = createDefaultUser(guid)
+        mockkObject(itemsRepository, usersRepository)
+        every { usersRepository.findUserByGUID(guid) } returns user
+        every { itemsRepository.isItemTagged(any()) } returns false
+        val response = Unirest.post("$baseUrl/items")
+            .header("guid", guid)
+            .body(Server.BodyItem("1234", ""))
+            .asEmpty()
+
+        val userTag = DbUserTag("1234", user.id, "")
+        assertThat(response.status).isEqualTo(204)
+        verify(exactly = 0) { itemsRepository.replaceUserTags(userTag) }
+        verify { itemsRepository.removeUserTagIfExists(userTag) }
+        excludeRecords {
+            itemsRepository.isItemTagged(userTag)
+        }
+        confirmVerified(itemsRepository)
         unmockkAll()
     }
 
