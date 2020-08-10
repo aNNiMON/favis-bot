@@ -10,7 +10,7 @@ class UsersRepository @Inject constructor(private val db: Database) {
                 .first(Int::class.java) != 0
     }
 
-    fun findUserById(id: Int): DbUser? = db.where("id = ?", id).first(DbUser::class.java)
+    fun findUserById(id: Long): DbUser? = db.where("id = ?", id).first(DbUser::class.java)
 
     fun findUserByGUID(guid: String): DbUser? = db.where("guid = ?", guid).first(DbUser::class.java)
 

@@ -10,7 +10,7 @@ data class AppConfig(
     val botUsername: String,
 
     @JsonProperty(required = true)
-    val adminId: Int,
+    val adminId: Long,
 
     @JsonProperty
     val host: String?,

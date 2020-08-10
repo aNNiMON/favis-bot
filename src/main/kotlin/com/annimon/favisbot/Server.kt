@@ -45,7 +45,7 @@ class Server @Inject constructor(
     /**
      * Returns meta info: app and bot names, user info, set names
      */
-    private fun getMeta(ctx: @NotNull Context) {
+    private fun getMeta(ctx: Context) {
         val user = usersRepository.findUserByGUID(ctx.pathParam("guid"))
         val sets = if (user == null) emptyList()
                    else userSetsRepository.findAllUserSets(user.id)
@@ -60,7 +60,7 @@ class Server @Inject constructor(
     /**
      * Finds a user by guid or denies the request
      */
-    private fun authUserByGUID(ctx: @NotNull Context) {
+    private fun authUserByGUID(ctx: Context) {
         if (!ctx.path().startsWith("/items"))
             return
         val guid = ctx.header("guid") ?: ""
@@ -79,7 +79,7 @@ class Server @Inject constructor(
     /**
      * Returns items in set with user tags
      */
-    private fun getItemsInSet(ctx: @NotNull Context) {
+    private fun getItemsInSet(ctx: Context) {
         val setName = ctx.pathParam("set")
         val user: DbUser = ctx.attribute("user")!!
         if (setName.startsWith("!")) {
@@ -92,7 +92,7 @@ class Server @Inject constructor(
     /**
      * Update or remove item
      */
-    private fun updateUserTag(ctx: @NotNull Context) {
+    private fun updateUserTag(ctx: Context) {
         val body = ctx.body<BodyItem>()
         val user: DbUser = ctx.attribute("user")!!
         val savedItem = DbUserTag(body.uniqueId, user.id, body.tags)

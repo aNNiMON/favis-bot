@@ -7,21 +7,21 @@ import com.annimon.favisbot.db.DbUser.Companion.ALLOWANCE_IGNORED
 import com.annimon.favisbot.db.DbUser.Companion.ALLOWANCE_UNKNOWN
 import com.annimon.favisbot.db.ItemsRepository
 import com.annimon.favisbot.db.UsersRepository
-import com.annimon.tgbotsmodule.BotHandler
-import com.annimon.tgbotsmodule.api.methods.Methods
+import com.github.kotlintelegrambot.bot
+import com.github.kotlintelegrambot.dispatch
+import com.github.kotlintelegrambot.dispatcher.*
+import com.github.kotlintelegrambot.entities.InlineQuery
+import com.github.kotlintelegrambot.entities.Message
+import com.github.kotlintelegrambot.entities.inlinequeryresults.InlineQueryResult
+import com.github.kotlintelegrambot.entities.inlinequeryresults.InputMessageContent
+import com.github.kotlintelegrambot.extensions.filters.Filter
+import com.github.kotlintelegrambot.logging.LogLevel
 import com.google.inject.Injector
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod
-import org.telegram.telegrambots.meta.api.objects.Message
-import org.telegram.telegrambots.meta.api.objects.Update
-import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery
-import org.telegram.telegrambots.meta.api.objects.inlinequery.inputmessagecontent.InputTextMessageContent
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultArticle
-import org.telegram.telegrambots.meta.api.objects.inlinequery.result.cached.*
 import java.time.Instant
 
-class FavisBotHandler(injector: Injector) : BotHandler() {
+class FavisBotHandler(injector: Injector) {
     private val appConfig = injector.getInstance(AppConfig::class.java)
     private val itemsRepository = injector.getInstance(ItemsRepository::class.java)
     private val usersRepository = injector.getInstance(UsersRepository::class.java)
@@ -36,53 +36,58 @@ class FavisBotHandler(injector: Injector) : BotHandler() {
         private val log: Logger = LoggerFactory.getLogger(FavisBotHandler::class.java)
     }
 
-    override fun getBotUsername() = appConfig.botUsername
-
-    override fun getBotToken() = appConfig.botToken
-
-    override fun onUpdate(update: Update): BotApiMethod<*>? {
-        if (update.hasCallbackQuery() && update.callbackQuery.message != null) {
-            val params = (update.callbackQuery.data ?: "").split(":".toRegex())
-            processCallback(params, update.callbackQuery.message)
-            return null
-        }
-        if (update.hasInlineQuery()) {
-            processInline(update.inlineQuery)
-            return null
-        }
-        if (update.hasMessage() && update.message.hasText()) {
-            val message = update.message
-            val (command, _) = message.text.split(" ".toRegex(), 2)
-            when (command.toLowerCase()) {
-                "/start" -> commandStart.run(message, this)
-                "/register" -> commandRegister.run(message, this)
-                "/announce" -> commandAnnounce.run(message, this)
-                "/help" -> commandHelp.run(message, this)
-                else -> log.info("Unknown command: $command")
+    private val bot = bot {
+        token = appConfig.botToken
+        logLevel = LogLevel.All()
+        dispatch {
+            callbackQuery { bot, update ->
+                update.callbackQuery?.let {
+                    val message = it.message ?: return@callbackQuery
+                    val params = it.data.split(":".toRegex())
+                    processCallback(params, message)
+                }
             }
-            return null
-        }
-        if (update.hasMessage() && update.message.hasSticker()) {
-            onStickerCommand.run(update.message, this)
-            return null
-        }
-        if (update.hasMessage()) {
-            onMediaCommand.run(update.message, this)
-            return null
-        }
 
-        if (update.hasChosenInlineQuery()) {
-            // TODO rating
-            log.info("Chosen inline query: ${update.chosenInlineQuery}")
+            inlineQuery { bot, inlineQuery ->
+                processInline(inlineQuery)
+            }
+
+            command("start") {
+                commandStart.run(update.message!!, bot)
+            }
+            command("register") {
+                commandRegister.run(update.message!!, bot)
+            }
+            command("announce") {
+                commandAnnounce.run(update.message!!, bot)
+            }
+            command("help") {
+                commandHelp.run(update.message!!, bot)
+            }
+
+            message(Filter.Sticker) { bot, update ->
+                onStickerCommand.run(update.message!!, bot)
+            }
+
+            message( Filter.Sticker.not() ) { bot, update ->
+                onMediaCommand.run(update.message!!, bot)
+            }
+
+            telegramError { bot, telegramError ->
+                log.error(telegramError.getErrorMessage())
+            }
         }
-        return null
+    }
+
+    init {
+        bot.startPolling()
     }
 
     private fun processCallback(params: List<String>, message: Message) {
         // allow or ignore users
         if (params.size != 2) return
         val type = params[0].toLowerCase()
-        val id = params[1].toIntOrNull() ?: return
+        val id = params[1].toLongOrNull() ?: return
         val user = usersRepository.findUserById(id) ?: return
         user.allowed = when (type) {
             "a" -> ALLOWANCE_ALLOWED
@@ -97,11 +102,8 @@ class FavisBotHandler(injector: Injector) : BotHandler() {
         } else {
             "Unfortunately, the administrator denied you access to the bot."
         }
-        Methods.sendMessage(id.toLong(), msg)
-                .callAsync(this)
-        Methods.editMessageReplyMarkup(message.chatId, message.messageId)
-                .setReplyMarkup(null)
-                .callAsync(this)
+        bot.sendMessage(id.toLong(), msg)
+        bot.editMessageReplyMarkup(message.chat.id, message.messageId)
     }
 
     private fun answerInlineNoResults(inlineQueryId: String) {
@@ -109,17 +111,12 @@ class FavisBotHandler(injector: Injector) : BotHandler() {
     }
 
     private fun answerInlineWithText(inlineQueryId: String, text: String, message: String?) {
-        val result = listOf(InlineQueryResultArticle().apply {
-            id = text.hashCode().toString()
-            title = text
-            inputMessageContent = InputTextMessageContent().apply {
-                messageText = message ?: text
-            }
-        })
-        Methods.answerInlineQuery(inlineQueryId, result)
-                .setCacheTime(60)
-                .setPersonal(true)
-                .call(this)
+        val results = listOf(InlineQueryResult.Article(
+            text.hashCode().toString(),
+            text,
+            InputMessageContent.Text(message ?: text)
+        ))
+        bot.answerInlineQuery(inlineQueryId, results, cacheTime = 60, isPersonal = true)
     }
 
     private fun processInline(inlineQuery: InlineQuery) {
@@ -139,30 +136,33 @@ class FavisBotHandler(injector: Injector) : BotHandler() {
         val query = inlineQuery.query
         val (count, items) = itemsRepository.searchItems(query, inlineQuery.from.id, entriesPerPage, offset)
         val results = items.mapNotNull { when (it.type) {
-            "sticker" -> InlineQueryResultCachedSticker().apply {
-                id = it.id.hashCode().toString()
-                stickerFileId = it.id
-            }
-            "animation" -> InlineQueryResultCachedMpeg4Gif().apply {
-                id = it.id.hashCode().toString()
-                mpeg4FileId = it.id
-            }
-            "document", "gif" -> InlineQueryResultCachedDocument().apply {
-                id = it.id.hashCode().toString()
-                documentFileId = it.id
-            }
-            "photo" -> InlineQueryResultCachedPhoto().apply {
-                id = it.id.hashCode().toString()
-                photoFileId = it.id
-            }
-            "video" -> InlineQueryResultCachedVideo().apply {
-                id = it.id.hashCode().toString()
-                videoFileId = it.id
-            }
-            "voice" -> InlineQueryResultCachedVoice().apply {
-                id = it.id.hashCode().toString()
-                voiceFileId = it.id
-            }
+            "sticker" -> InlineQueryResult.CachedSticker(
+                    id = it.id.hashCode().toString(),
+                    stickerFileId = it.id
+            )
+            "animation" -> InlineQueryResult.CachedMpeg4Gif(
+                    id = it.id.hashCode().toString(),
+                    mpeg4FileId = it.id
+            )
+            "document", "gif" -> InlineQueryResult.CachedDocument(
+                    id = it.id.hashCode().toString(),
+                    title = "",
+                    documentFileId = it.id
+            )
+            "photo" -> InlineQueryResult.CachedPhoto(
+                    id = it.id.hashCode().toString(),
+                    photoFileId = it.id
+            )
+            "video" -> InlineQueryResult.CachedVideo(
+                    id = it.id.hashCode().toString(),
+                    title = "",
+                    videoFileId = it.id
+            )
+            "voice" -> InlineQueryResult.CachedVoice(
+                    id = it.id.hashCode().toString(),
+                    title = "",
+                    voiceFileId = it.id
+            )
             else -> null
         } }
         if (results.isEmpty()) {
@@ -173,15 +173,12 @@ class FavisBotHandler(injector: Injector) : BotHandler() {
         if (offset + entriesPerPage < count) {
             nextOffset = (offset + entriesPerPage).toString()
         }
-        Methods.answerInlineQuery(inlineQuery.id, results)
-                .setCacheTime(100)
-                .setPersonal(true)
-                .setNextOffset(nextOffset)
-                .call(this)
+        bot.answerInlineQuery(inlineQuery.id, results,
+                cacheTime = 100, isPersonal = true, nextOffset = nextOffset)
     }
 
     private fun getAllowance(user: DbUser?): Int {
-        if (appConfig.adminId == user?.id) return ALLOWANCE_ALLOWED
+        if (appConfig.adminId == user?.id?.toLong()) return ALLOWANCE_ALLOWED
         return (user?.allowed ?: ALLOWANCE_UNKNOWN)
     }
 }

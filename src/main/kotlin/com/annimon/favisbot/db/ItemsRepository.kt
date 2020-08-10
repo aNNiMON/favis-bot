@@ -48,7 +48,7 @@ class ItemsRepository @Inject constructor(private val db: Database) {
         return !wasExists
     }
 
-    fun searchItems(q: String, userId: Int, limit: Int, offset: Int): Pair<Int, List<DbItemWithTag>> {
+    fun searchItems(q: String, userId: Long, limit: Int, offset: Int): Pair<Int, List<DbItemWithTag>> {
         var query = q.replace("[;:\"'`]".toRegex(), "")
         val tags = query.split(",\\s*".toRegex()).filterNot(String::isBlank)
 

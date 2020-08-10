@@ -4,13 +4,13 @@ import com.annimon.favisbot.db.DbItem
 import com.annimon.favisbot.db.DbUserSet
 import com.annimon.favisbot.db.ItemsRepository
 import com.annimon.favisbot.db.UserSetsRepository
-import com.annimon.tgbotsmodule.api.methods.Methods
-import com.annimon.tgbotsmodule.services.CommonAbsSender
+import com.github.kotlintelegrambot.Bot
+import com.github.kotlintelegrambot.entities.Message
+import com.github.kotlintelegrambot.entities.files.PhotoSize
+import com.github.kotlintelegrambot.network.fold
 import com.google.inject.Inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.telegram.telegrambots.meta.api.objects.Message
-import org.telegram.telegrambots.meta.api.objects.PhotoSize
 import java.io.File
 import java.time.Instant
 
@@ -23,13 +23,12 @@ class OnMediaCommand @Inject constructor(
         private val log: Logger = LoggerFactory.getLogger(OnMediaCommand::class.java)
     }
 
-    override fun run(message: Message, sender: CommonAbsSender) {
+    override fun run(message: Message, bot: Bot) {
         val (type, fileId, uniqueId, thumb) = getMediaInfo(message) ?: return
         if (type.isEmpty()) return
         log.info("processMedia: $type $fileId (unique: $uniqueId)")
         if (thumb == null) {
-            val msg = "Media without thumbnails are not supported yet"
-            Methods.sendMessage(message.from.id.toLong(), msg).callAsync(sender)
+            bot.sendMessage(message.from!!.id, "Media without thumbnails are not supported yet")
             return
         }
 
@@ -44,15 +43,15 @@ class OnMediaCommand @Inject constructor(
             ))
         }
 
-        downloadThumbForMediaType(type, uniqueId, thumb.fileId, sender)
-        val status = if (userSetsRepository.isUserSetExists(uniqueId, message.from.id)) {
+        downloadThumbForMediaType(type, uniqueId, thumb.fileId, bot)
+        val status = if (userSetsRepository.isUserSetExists(uniqueId, message.from!!.id.toInt())) {
             "already exists in your collection"
         } else {
-            userSetsRepository.addUserSet(DbUserSet(uniqueId, message.from.id, Instant.now().epochSecond))
+            userSetsRepository.addUserSet(DbUserSet(uniqueId, message.from!!.id.toInt(), Instant.now().epochSecond))
             "added to your collection"
         }
         val msg = type.capitalize() + " $status."
-        Methods.sendMessage(message.from.id.toLong(), msg).callAsync(sender)
+        bot.sendMessage(message.from!!.id, msg)
     }
 
     data class MediaInfo(val type: String, val fileId: String, val uniqueId: String, val thumb: PhotoSize?)
@@ -68,7 +67,7 @@ class OnMediaCommand @Inject constructor(
         msg.photo
                 ?.maxBy { max -> max.width * max.height }
                 ?.let { max ->
-                    val thumb = msg.photo.minBy { min -> min.width * min.height }
+                    val thumb = msg.photo?.minBy { min -> min.width * min.height }
                     return MediaInfo("photo", max.fileId, max.fileUniqueId, thumb)
                 }
         msg.video?.let { return MediaInfo("video", it.fileId, it.fileUniqueId, it.thumb) }
@@ -76,11 +75,17 @@ class OnMediaCommand @Inject constructor(
         return null
     }
 
-    private fun downloadThumbForMediaType(type: String, filename: String, thumbId: String, sender: CommonAbsSender) {
+    private fun downloadThumbForMediaType(type: String, filename: String, thumbId: String, bot: Bot) {
         val parent = File("public/thumbs/!$type")
         parent.mkdirs()
         val localFile = File(parent, "${filename}.png")
-        Methods.getFile(thumbId)
-                .callAsync(sender) { tgFile -> sender.downloadFile(tgFile, localFile) }
+        bot.getFile(thumbId).fold({
+            if (it?.ok == false || it?.result == null) return@fold
+            bot.downloadFile(it.result!!.filePath!!).fold({ body ->
+                localFile.outputStream().use { os ->
+                    body!!.byteStream().copyTo(os, 8192)
+                }
+            })
+        })
     }
 }

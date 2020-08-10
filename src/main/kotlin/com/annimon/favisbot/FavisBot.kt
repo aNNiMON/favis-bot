@@ -4,19 +4,22 @@ import com.annimon.favisbot.commands.AnnounceCommand
 import com.annimon.favisbot.commands.HelpCommand
 import com.annimon.favisbot.commands.RegisterCommand
 import com.annimon.favisbot.commands.StartCommand
-import com.annimon.favisbot.db.ItemsRepository
 import com.annimon.favisbot.db.DbSchema
+import com.annimon.favisbot.db.ItemsRepository
 import com.annimon.favisbot.db.UserSetsRepository
 import com.annimon.favisbot.db.UsersRepository
-import com.annimon.tgbotsmodule.BotModule
-import com.annimon.tgbotsmodule.Runner
-import com.annimon.tgbotsmodule.services.YamlConfigLoaderService
 import com.dieselpoint.norm.Database
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.google.inject.AbstractModule
 import com.google.inject.Guice
 import com.google.inject.Provides
 import com.google.inject.Singleton
+import java.io.File
+import java.io.IOException
+import java.lang.IllegalStateException
+import kotlin.concurrent.thread
 
 class FavisBot(private val appName: String) : AbstractModule() {
 
@@ -26,9 +29,7 @@ class FavisBot(private val appName: String) : AbstractModule() {
             val injector = Guice.createInjector(FavisBot("favisbot"))
             val server = injector.getInstance(Server::class.java)
             server.start()
-            Runner.run("", listOf(BotModule {
-                FavisBotHandler(injector)
-            }))
+            FavisBotHandler(injector)
         }
     }
 
@@ -56,10 +57,13 @@ class FavisBot(private val appName: String) : AbstractModule() {
     @Provides
     @Singleton
     fun getAppConfig(): AppConfig {
-        val configLoader = YamlConfigLoaderService<AppConfig>()
-        val configFile = configLoader.configFile(appName, "")
-        return configLoader.load(configFile, AppConfig::class.java, false) {
-            it.registerModule(KotlinModule())
+        val mapper = ObjectMapper(YAMLFactory())
+        mapper.registerModule(KotlinModule())
+        val configFile = File("$appName.yaml")
+        try {
+            return mapper.readValue(configFile, AppConfig::class.java)
+        } catch (ex: IOException) {
+            throw IllegalStateException("Could not read config file: $configFile", ex)
         }
     }
 }

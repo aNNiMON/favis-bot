@@ -1,10 +1,10 @@
 package com.annimon.favisbot.commands
 
-import com.annimon.tgbotsmodule.services.CommonAbsSender
-import org.telegram.telegrambots.meta.api.objects.Message
+import com.github.kotlintelegrambot.Bot
+import com.github.kotlintelegrambot.entities.Message
 
 interface MessageCommand {
-    fun run(message: Message, sender: CommonAbsSender)
+    fun run(message: Message, bot: Bot)
 
     fun safeHtml(text: String?): String {
         if (text == null) return ""

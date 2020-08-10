@@ -1,12 +1,12 @@
 package com.annimon.favisbot.commands
 
 import com.annimon.favisbot.AppConfig
-import com.annimon.tgbotsmodule.api.methods.Methods
-import com.annimon.tgbotsmodule.services.CommonAbsSender
+import com.github.kotlintelegrambot.Bot
+import com.github.kotlintelegrambot.entities.Message
+import com.github.kotlintelegrambot.entities.ParseMode
 import com.google.inject.Inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.telegram.telegrambots.meta.api.objects.Message
 
 class HelpCommand @Inject constructor(
         private val appConfig: AppConfig
@@ -16,9 +16,9 @@ class HelpCommand @Inject constructor(
         private val log: Logger = LoggerFactory.getLogger(HelpCommand::class.java)
     }
 
-    override fun run(message: Message, sender: CommonAbsSender) {
-        log.info("cmdHelp: by ${message.from.id}")
-        val bot = "@${appConfig.botUsername}"
+    override fun run(message: Message, bot: Bot) {
+        log.info("cmdHelp: by ${message.from!!.id}")
+        val botName = "@${appConfig.botUsername}"
         val text = """
             *Usage*
 
@@ -41,16 +41,12 @@ class HelpCommand @Inject constructor(
             
             *Inline mode*
             
-            Type `$bot` in any chat to access your tagged collection.
-            Type `$bot term` to show items containing the substring "term" tag.
-            For exact match only, use `.` at the end of your term:  `$bot term.
-            You can specify more terms by separating them with comma:  `$bot term1, term2., term3`
+            Type `$botName` in any chat to access your tagged collection.
+            Type `$botName term` to show items containing the substring "term" tag.
+            For exact match only, use `.` at the end of your term:  `$botName term.
+            You can specify more terms by separating them with comma:  `$botName term1, term2., term3`
             To show all your tagged collection you can use `.all` query.
             """.trimIndent()
-        Methods.sendMessage()
-                .setChatId(message.from.id.toLong())
-                .setText(text)
-                .enableMarkdown()
-                .callAsync(sender)
+        bot.sendMessage(message.from!!.id, text, parseMode = ParseMode.MARKDOWN)
     }
 }
