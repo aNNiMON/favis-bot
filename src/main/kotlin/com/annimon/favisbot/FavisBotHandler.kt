@@ -38,7 +38,7 @@ class FavisBotHandler(injector: Injector) {
 
     private val bot = bot {
         token = appConfig.botToken
-        logLevel = LogLevel.All()
+        logLevel = LogLevel.Error
         dispatch {
             callbackQuery { bot, update ->
                 update.callbackQuery?.let {
