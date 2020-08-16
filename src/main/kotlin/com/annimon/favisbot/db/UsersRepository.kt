@@ -5,7 +5,7 @@ import com.google.inject.Inject
 
 class UsersRepository @Inject constructor(private val db: Database) {
 
-    fun isUserExists(id: Int): Boolean {
+    private fun isUserExists(id: Int): Boolean {
         return db.sql("SELECT COUNT(*) FROM users WHERE id = ?", id)
                 .first(Int::class.java) != 0
     }

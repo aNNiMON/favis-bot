@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.annimon.favisbot.db
 
 import javax.persistence.Id
@@ -38,10 +40,10 @@ data class DbUser(
     constructor() : this(0, "", "", ALLOWANCE_UNKNOWN, 0)
 
     companion object {
-        val ALLOWANCE_UNKNOWN = 0
-        val ALLOWANCE_ALLOWED = 1
-        val ALLOWANCE_PENDING = 2
-        val ALLOWANCE_IGNORED = 3
+        const val ALLOWANCE_UNKNOWN = 0
+        const val ALLOWANCE_ALLOWED = 1
+        const val ALLOWANCE_PENDING = 2
+        const val ALLOWANCE_IGNORED = 3
     }
 }
 

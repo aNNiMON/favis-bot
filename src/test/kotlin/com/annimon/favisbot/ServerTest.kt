@@ -13,8 +13,8 @@ class ServerTest {
 
     companion object {
         private val injector = Guice.createInjector(TestModule())
-        private const val baseUrl = "http://127.0.0.1:9377"
         private val server = injector.getInstance(Server::class.java)
+        private const val baseUrl = "http://127.0.0.1:9377"
 
         @BeforeClass
         @JvmStatic
