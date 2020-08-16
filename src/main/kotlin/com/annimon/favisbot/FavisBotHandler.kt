@@ -100,7 +100,8 @@ class FavisBotHandler(injector: Injector) {
             "Congratulations, the administrator has granted access to the bot." +
             " Call the /register command again to get the link."
         } else {
-            "Unfortunately, the administrator denied you access to the bot."
+            "Unfortunately, the administrator denied you access to the bot." +
+            "\nHowever, you can deploy your own bot instance: https://github.com/aNNiMON/favis-bot"
         }
         bot.sendMessage(id.toLong(), msg)
         bot.editMessageReplyMarkup(message.chat.id, message.messageId)
