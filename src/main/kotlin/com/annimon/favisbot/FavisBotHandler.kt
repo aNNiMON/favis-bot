@@ -30,6 +30,7 @@ class FavisBotHandler(injector: Injector) {
     private val commandRegister = injector.getInstance(RegisterCommand::class.java)
     private val commandAnnounce = injector.getInstance(AnnounceCommand::class.java)
     private val commandHelp = injector.getInstance(HelpCommand::class.java)
+    private val commandUptime = injector.getInstance(UptimeCommand::class.java)
     private val onStickerCommand = injector.getInstance(OnStickerCommand::class.java)
     private val onMediaCommand = injector.getInstance(OnMediaCommand::class.java)
 
@@ -64,6 +65,9 @@ class FavisBotHandler(injector: Injector) {
             }
             command("help") {
                 commandHelp.run(update.message!!, bot)
+            }
+            command("uptime") {
+                commandUptime.run(update.message!!, bot)
             }
 
             message(Filter.Sticker) {

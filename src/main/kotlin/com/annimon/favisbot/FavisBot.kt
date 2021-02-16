@@ -1,9 +1,6 @@
 package com.annimon.favisbot
 
-import com.annimon.favisbot.commands.AnnounceCommand
-import com.annimon.favisbot.commands.HelpCommand
-import com.annimon.favisbot.commands.RegisterCommand
-import com.annimon.favisbot.commands.StartCommand
+import com.annimon.favisbot.commands.*
 import com.annimon.favisbot.db.DbSchema
 import com.annimon.favisbot.db.ItemsRepository
 import com.annimon.favisbot.db.UserSetsRepository
@@ -43,6 +40,7 @@ class FavisBot(private val appName: String) : AbstractModule() {
         bind(RegisterCommand::class.java).`in`(Singleton::class.java)
         bind(AnnounceCommand::class.java).`in`(Singleton::class.java)
         bind(HelpCommand::class.java).`in`(Singleton::class.java)
+        bind(UptimeCommand::class.java).`in`(Singleton::class.java)
     }
 
     @Provides
