@@ -6,6 +6,7 @@ import com.annimon.favisbot.db.ItemsRepository
 import com.annimon.favisbot.db.UserSetsRepository
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatAction
+import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.stickers.StickerSet
 import com.github.kotlintelegrambot.network.fold
@@ -36,7 +37,7 @@ class OnStickerCommand @Inject constructor(
                 userSetsRepository.addUserSet(DbUserSet(setName, fromId.toInt(), Instant.now().epochSecond))
             }
             downloadThumbs(stickerSet, bot) {
-                bot.sendChatAction(fromId, ChatAction.TYPING)
+                bot.sendChatAction(ChatId.fromId(fromId), ChatAction.TYPING)
             }
 
             val newItemsCount = stickerSet.stickers
@@ -51,7 +52,7 @@ class OnStickerCommand @Inject constructor(
                 .onEach { itemsRepository.addItem(it) }
                 .count()
             log.info("processSticker: $setName added $newItemsCount of ${stickerSet.stickers.size}")
-            bot.sendMessage(fromId, """Sticker set "${stickerSet.title}" added""")
+            bot.sendMessage(ChatId.fromId(fromId), """Sticker set "${stickerSet.title}" added""")
         })
     }
 

@@ -2,6 +2,7 @@ package com.annimon.favisbot.commands
 
 import com.annimon.favisbot.AppConfig
 import com.github.kotlintelegrambot.Bot
+import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.ParseMode
 import com.google.inject.Inject
@@ -47,6 +48,6 @@ class HelpCommand @Inject constructor(
             You can specify more terms by separating them with comma:  `$botName term1, term2., term3`
             To show all your tagged collection you can use `.all` query.
             """.trimIndent()
-        bot.sendMessage(message.from!!.id, text, parseMode = ParseMode.MARKDOWN)
+        bot.sendMessage(ChatId.fromId(message.from!!.id), text, parseMode = ParseMode.MARKDOWN)
     }
 }

@@ -10,6 +10,7 @@ import com.annimon.favisbot.db.UsersRepository
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.*
+import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.InlineQuery
 import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.inlinequeryresults.InlineQueryResult
@@ -40,7 +41,7 @@ class FavisBotHandler(injector: Injector) {
         token = appConfig.botToken
         logLevel = LogLevel.Error
         dispatch {
-            callbackQuery { bot, update ->
+            callbackQuery {
                 update.callbackQuery?.let {
                     val message = it.message ?: return@callbackQuery
                     val params = it.data.split(":".toRegex())
@@ -48,7 +49,7 @@ class FavisBotHandler(injector: Injector) {
                 }
             }
 
-            inlineQuery { bot, inlineQuery ->
+            inlineQuery {
                 processInline(inlineQuery)
             }
 
@@ -65,16 +66,16 @@ class FavisBotHandler(injector: Injector) {
                 commandHelp.run(update.message!!, bot)
             }
 
-            message(Filter.Sticker) { bot, update ->
+            message(Filter.Sticker) {
                 onStickerCommand.run(update.message!!, bot)
             }
 
-            message( Filter.Sticker.not() ) { bot, update ->
+            message( Filter.Sticker.not() ) {
                 onMediaCommand.run(update.message!!, bot)
             }
 
-            telegramError { bot, telegramError ->
-                log.error(telegramError.getErrorMessage())
+            telegramError {
+                log.error(error.getErrorMessage())
             }
         }
     }
@@ -103,8 +104,8 @@ class FavisBotHandler(injector: Injector) {
             "Unfortunately, the administrator denied you access to the bot." +
             "\nHowever, you can deploy your own bot instance: https://github.com/aNNiMON/favis-bot"
         }
-        bot.sendMessage(id, msg)
-        bot.editMessageReplyMarkup(message.chat.id, message.messageId)
+        bot.sendMessage(ChatId.fromId(id), msg)
+        bot.editMessageReplyMarkup(ChatId.fromId(message.chat.id), message.messageId)
     }
 
     private fun answerInlineNoResults(inlineQueryId: String) {

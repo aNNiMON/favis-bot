@@ -8,6 +8,7 @@ import com.annimon.favisbot.db.DbUser.Companion.ALLOWANCE_PENDING
 import com.annimon.favisbot.db.DbUser.Companion.ALLOWANCE_UNKNOWN
 import com.annimon.favisbot.db.UsersRepository
 import com.github.kotlintelegrambot.Bot
+import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.ParseMode
@@ -48,19 +49,19 @@ class RegisterCommand @Inject constructor(
                         allowed = ALLOWANCE_PENDING,
                         updatedAt = Instant.now().epochSecond
                 ))
-                bot.sendMessage(fromId, "You requested permission to access the bot." +
+                bot.sendMessage(ChatId.fromId(fromId), "You requested permission to access the bot." +
                         " After the administrator approves the application," +
                         " you will receive a message.")
 
                 val msg = "User <a href=\"tg://user?id=$fromId\">" +
                         safeHtml(message.from!!.firstName) + "</a>" +
                         " requested access to the bot."
-                bot.sendMessage(appConfig.adminId, msg,
+                bot.sendMessage(ChatId.fromId(appConfig.adminId), msg,
                     parseMode = ParseMode.HTML,
-                    replyMarkup = InlineKeyboardMarkup(listOf(
+                    replyMarkup = InlineKeyboardMarkup.create(listOf(
                         listOf(
-                            InlineKeyboardButton("Allow", callbackData = "a:$fromId"),
-                            InlineKeyboardButton("Ignore", callbackData = "i:$fromId")
+                            InlineKeyboardButton.CallbackData("Allow", "a:$fromId"),
+                            InlineKeyboardButton.CallbackData("Ignore", "i:$fromId")
                         )
                     )))
             }
@@ -76,11 +77,11 @@ class RegisterCommand @Inject constructor(
                 ))
                 val host = appConfig.host ?: "http://127.0.0.1"
                 val port = appConfig.port ?: 9377
-                bot.sendMessage(fromId,
+                bot.sendMessage(ChatId.fromId(fromId),
                         "Here's your link to the web page.\n" +
                         "You can generate a new link by sending /register again.",
                         replyMarkup = InlineKeyboardMarkup.createSingleButton(
-                            InlineKeyboardButton("Profile page", "$host:$port/?d=$guid")
+                            InlineKeyboardButton.Url("Profile page", "$host:$port/?d=$guid")
                         ))
             }
         }

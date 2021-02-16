@@ -5,6 +5,7 @@ import com.annimon.favisbot.db.DbUserSet
 import com.annimon.favisbot.db.ItemsRepository
 import com.annimon.favisbot.db.UserSetsRepository
 import com.github.kotlintelegrambot.Bot
+import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.files.PhotoSize
 import com.github.kotlintelegrambot.network.fold
@@ -28,7 +29,7 @@ class OnMediaCommand @Inject constructor(
         if (type.isEmpty()) return
         log.info("processMedia: $type $fileId (unique: $uniqueId)")
         if (thumb == null) {
-            bot.sendMessage(message.from!!.id, "Media without thumbnails are not supported yet")
+            bot.sendMessage(ChatId.fromId(message.from!!.id), "Media without thumbnails are not supported yet")
             return
         }
 
@@ -51,7 +52,7 @@ class OnMediaCommand @Inject constructor(
             "added to your collection"
         }
         val msg = type.capitalize() + " $status."
-        bot.sendMessage(message.from!!.id, msg)
+        bot.sendMessage(ChatId.fromId(message.from!!.id), msg)
     }
 
     data class MediaInfo(val type: String, val fileId: String, val uniqueId: String, val thumb: PhotoSize?)
@@ -65,7 +66,7 @@ class OnMediaCommand @Inject constructor(
                     return MediaInfo("gif", it.fileId, it.fileUniqueId, it.thumb)
                 }
         msg.photo
-                ?.maxBy { max -> max.width * max.height }
+                ?.maxByOrNull { max -> max.width * max.height }
                 ?.let { max ->
                     val thumb = msg.photo?.minBy { min -> min.width * min.height }
                     return MediaInfo("photo", max.fileId, max.fileUniqueId, thumb)

@@ -2,6 +2,7 @@ package com.annimon.favisbot.commands
 
 import com.annimon.favisbot.AppConfig
 import com.github.kotlintelegrambot.Bot
+import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.Message
 import com.google.inject.Inject
 import org.slf4j.Logger
@@ -23,7 +24,7 @@ class StartCommand @Inject constructor(
             text += "You need administrator permission to access this bot. " +
                     "Send /register command to request access.\n\n"
         }
-        // text += "Source code: https://github.com/"
-        bot.sendMessage(message.from!!.id, text)
+        text += "Source code: https://github.com/aNNiMON/favis-bot/"
+        bot.sendMessage(ChatId.fromId(message.from!!.id), text)
     }
 }

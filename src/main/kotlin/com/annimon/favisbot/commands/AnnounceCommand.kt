@@ -4,6 +4,7 @@ import com.annimon.favisbot.AppConfig
 import com.annimon.favisbot.db.DbUser.Companion.ALLOWANCE_ALLOWED
 import com.annimon.favisbot.db.UsersRepository
 import com.github.kotlintelegrambot.Bot
+import com.github.kotlintelegrambot.entities.ChatId
 import com.google.inject.Inject
 import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.ParseMode
@@ -19,7 +20,7 @@ class AnnounceCommand @Inject constructor(
         if (message.from!!.id != appConfig.adminId) return
         if (message.replyToMessage?.text == null) {
             val msg = "To announce message, you must reply to it with /announce command"
-            bot.sendMessage(appConfig.adminId, msg)
+            bot.sendMessage(ChatId.fromId(appConfig.adminId), msg)
             return
         }
 
@@ -30,10 +31,10 @@ class AnnounceCommand @Inject constructor(
                 if (index.rem(10) == 0) {
                     Thread.sleep(1000)
                 }
-                val result = bot.sendMessage(user.id.toLong(), msg, parseMode = ParseMode.HTML)
+                val result = bot.sendMessage(ChatId.fromId(user.id.toLong()), msg, parseMode = ParseMode.HTML)
                 result.bimap({ 0 }, { 1 })
             }.sum()
-            bot.sendMessage(appConfig.adminId, "Message sent to $sentCount users")
+            bot.sendMessage(ChatId.fromId(appConfig.adminId), "Message sent to $sentCount users")
         }
     }
 }
