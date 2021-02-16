@@ -157,7 +157,7 @@ class FavisBotHandler(injector: Injector) {
             )
             "video" -> InlineQueryResult.CachedVideo(
                     id = it.id.hashCode().toString(),
-                    title = "",
+                    title = "video",
                     videoFileId = it.id
             )
             "voice" -> InlineQueryResult.CachedVoice(
