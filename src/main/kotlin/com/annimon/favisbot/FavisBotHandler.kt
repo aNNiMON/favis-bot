@@ -85,6 +85,7 @@ class FavisBotHandler(injector: Injector) {
     }
 
     init {
+        bot.deleteWebhook()
         bot.startPolling()
     }
 
