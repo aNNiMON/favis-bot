@@ -20,7 +20,7 @@ Java 11 or newer required.
 ```bash
 cp favisbot-example.yaml favisbot.yaml
 # edit config: admin id, bot token, etc
-nano favisbot.yaml
+vim favisbot.yaml
 java -Dfile.encoding=UTF8 -cp favisbot.jar com.annimon.favisbot.FavisBot
 ```
 
