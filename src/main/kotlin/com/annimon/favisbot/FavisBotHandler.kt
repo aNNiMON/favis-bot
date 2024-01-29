@@ -92,7 +92,7 @@ class FavisBotHandler(injector: Injector) {
     private fun processCallback(params: List<String>, message: Message) {
         // allow or ignore users
         if (params.size != 2) return
-        val type = params[0].toLowerCase()
+        val type = params[0].lowercase()
         val id = params[1].toLongOrNull() ?: return
         val user = usersRepository.findUserById(id) ?: return
         user.allowed = when (type) {

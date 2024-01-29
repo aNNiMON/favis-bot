@@ -1,0 +1,26 @@
+Configuration:
+  name: FavisBotConfig
+  status: info
+
+  Appenders:
+    RollingFile:
+      - name: File
+        fileName: "logs/bot.log"
+        filePattern: "logs/bot-%d{yyyy-MM}-%i.log.gz"
+        PatternLayout:
+          Pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"
+        Policies:
+          TimeBasedTriggeringPolicy:
+            interval: 3
+          SizeBasedTriggeringPolicy:
+            size: 10 MB
+        DefaultRolloverStrategy:
+          max: 6
+
+  Loggers:
+    Root:
+      level: info
+      AppenderRef:
+        - ref: Console
+          level: error
+        - ref: File

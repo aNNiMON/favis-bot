@@ -9,6 +9,7 @@ import com.dieselpoint.norm.Database
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.google.inject.AbstractModule
 import com.google.inject.Guice
 import com.google.inject.Provides
@@ -55,8 +56,7 @@ class FavisBot(private val appName: String) : AbstractModule() {
     @Provides
     @Singleton
     fun getAppConfig(): AppConfig {
-        val mapper = ObjectMapper(YAMLFactory())
-        mapper.registerModule(KotlinModule())
+        val mapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
         val configFile = File("$appName.yaml")
         try {
             return mapper.readValue(configFile, AppConfig::class.java)

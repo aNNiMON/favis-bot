@@ -51,7 +51,7 @@ class OnMediaCommand @Inject constructor(
             userSetsRepository.addUserSet(DbUserSet(uniqueId, message.from!!.id.toInt(), Instant.now().epochSecond))
             "added to your collection"
         }
-        val msg = type.capitalize() + " $status."
+        val msg = type.replaceFirstChar(Char::titlecaseChar) + " $status."
         bot.sendMessage(ChatId.fromId(message.from!!.id), msg)
     }
 
@@ -68,7 +68,7 @@ class OnMediaCommand @Inject constructor(
         msg.photo
                 ?.maxByOrNull { max -> max.width * max.height }
                 ?.let { max ->
-                    val thumb = msg.photo?.minBy { min -> min.width * min.height }
+                    val thumb = msg.photo?.minByOrNull { min -> min.width * min.height }
                     return MediaInfo("photo", max.fileId, max.fileUniqueId, thumb)
                 }
         msg.video?.let { return MediaInfo("video", it.fileId, it.fileUniqueId, it.thumb) }

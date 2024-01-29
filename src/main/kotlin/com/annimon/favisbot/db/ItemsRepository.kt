@@ -39,7 +39,7 @@ class ItemsRepository @Inject constructor(private val db: Database) {
         val wasExists = removeUserTagIfExists(item)
         item.tag.split(",")
                 .map { it.trim() }
-                .distinctBy { it.toLowerCase() }
+                .distinctBy { it.lowercase() }
                 .forEach { tag ->
                     db.sql("INSERT INTO userTags(itemId, userId, tag) VALUES (?, ?, ?)",
                             item.itemId, item.userId, tag)

@@ -8,7 +8,6 @@ import com.github.kotlintelegrambot.entities.ChatId
 import com.google.inject.Inject
 import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.ParseMode
-import com.github.kotlintelegrambot.network.bimap
 import kotlin.concurrent.thread
 
 class AnnounceCommand @Inject constructor(
@@ -32,7 +31,7 @@ class AnnounceCommand @Inject constructor(
                     Thread.sleep(1000)
                 }
                 val result = bot.sendMessage(ChatId.fromId(user.id.toLong()), msg, parseMode = ParseMode.HTML)
-                result.bimap({ 0 }, { 1 })
+                result.fold({ 0 }, { 1 })
             }.sum()
             bot.sendMessage(ChatId.fromId(appConfig.adminId), "Message sent to $sentCount users")
         }

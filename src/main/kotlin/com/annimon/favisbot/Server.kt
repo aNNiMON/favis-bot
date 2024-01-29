@@ -25,18 +25,17 @@ class Server @Inject constructor(
 
     fun start() {
         app = Javalin.create {
-            it.addStaticFiles("/", "public", Location.EXTERNAL)
+            it.staticFiles.add("public", Location.EXTERNAL)
+            it.router.apiBuilder {
+                get("/meta/{guid}", ::getMeta)
+                before(::authUserByGUID)
+                get("/items/{set}", ::getItemsInSet)
+                post("/items", ::updateUserTag)
+            }
         }.apply {
-            exception(Exception::class.java) { e, ctx -> log.error("javalin", e) }
+            exception(Exception::class.java) { e, _ -> log.error("javalin", e) }
             error(404) { ctx -> ctx.json("not found") }
         }.start(appConfig.port ?: 9377)
-
-        app.routes {
-            get("/meta/:guid", ::getMeta)
-            before(::authUserByGUID)
-            get("/items/:set", ::getItemsInSet)
-            post("/items", ::updateUserTag)
-        }
     }
 
     fun stop() = app.stop()
@@ -92,7 +91,7 @@ class Server @Inject constructor(
      * Update or remove item
      */
     private fun updateUserTag(ctx: Context) {
-        val body = ctx.body<BodyItem>()
+        val body = ctx.bodyAsClass(BodyItem::class.java)
         val user: DbUser = ctx.attribute("user")!!
         val savedItem = DbUserTag(body.uniqueId, user.id, body.tags)
         if (body.tags.isBlank()) {
